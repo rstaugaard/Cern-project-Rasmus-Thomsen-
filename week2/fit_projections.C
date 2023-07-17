@@ -17,7 +17,7 @@ Float_t minimize_func(Double_t *par)
     
     Float_t chi2 = 0;
     
-    Float_t *row_content;
+    Float_t *row_conte.nt;
     
     Int_t numbins = 0;
   
@@ -112,7 +112,7 @@ void fit_projections()
        y[i] = gauss(x[i],pars);
    }
 
-    auto g = new TGraph(60,x,y);
+    auto g = new TGraph(6.0,x,y);
     g->SetLineColor(2);
     g->Draw("SAME");
 
