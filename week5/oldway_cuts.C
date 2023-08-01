@@ -60,11 +60,11 @@ Double_t background(Float_t x,Double_t *par)
 Double_t totalfit(Float_t x,Double_t *par)
 {
    Double_t bp[4] = {7.37157e+04 , 2.47286e-01,1.13211e+00, 4.88666e+00 };
-   //Double_t pars1[4] = {par[0],par[1],par[2],par[3]};
-   Double_t pars2[3] = {par[0],par[1],par[2]};
-   Double_t pars3[3] = {par[3],par[4],par[5]};
+   Double_t pars1[4] = {par[0],par[1],par[2],par[3]};
+   Double_t pars2[3] = {par[4],par[5],par[6]};
+   Double_t pars3[3] = {par[7],par[8],par[9]};
    
-   Double_t value = background(x,bp)+gauss(x,pars2)+breitwigner(x,pars3);
+   Double_t value = background(x,pars1)+gauss(x,pars2)+breitwigner(x,pars3);
    return value;
 }
 
@@ -103,28 +103,28 @@ void fcn(Int_t &npar, double *gin, double &f, double *par, int iflag)
 }
 
 
-const Int_t numpar = 6;
+const Int_t numpar = 10;
 Int_t num_entries = 0;
 
 void myminimizer(Double_t *par, Double_t *err)
 {
-    Double_t arglist[6] = {5.70120e+02, 7.40403e-01, 6.65430e-02,2.68407e+01,4.97216e-01, 2.18391e-02};
+    Double_t arglist[10] = {7.37157e+04 , 2.47286e-01,1.13211e+00, 4.88666e+00,5.70120e+02, 7.40403e-01, 6.65430e-02,2.68407e+01,4.97216e-01, 2.18391e-02};
     
     TMinuit *gMinuit2 = new TMinuit(10);
     gMinuit2->SetFCN(fcn);
     
     Int_t ierflg = 0 ;
-    //gMinuit2->mnexcm("SET ERR", arglist ,1,ierflg);
-    //gMinuit2->mnparm(0, "A", arglist[0], 0.0001, 0, 0, ierflg);
-    //gMinuit2->mnparm(1, "B", arglist[1], 0.0001,0, 0, ierflg);
-    //gMinuit2->mnparm(2, "C",arglist[2], 0.0001, 0, 0, ierflg);
-    //gMinuit2->mnparm(0, "D",arglist[0], 0.0001, 0, 0, ierflg);
-    gMinuit2->mnparm(0, "N", arglist[0], 0.0001, 0, 0, ierflg);
-    gMinuit2->mnparm(1, "mu", arglist[1], 0.0001,0, 0, ierflg);
-    gMinuit2->mnparm(2, "sigma",arglist[2], 0.0001, 0, 0, ierflg);
-    gMinuit2->mnparm(3, "k", arglist[3], 0.0001, 0, 0, ierflg);
-    gMinuit2->mnparm(4, "mu2", arglist[4], 0.0001,0, 0, ierflg);   
-    gMinuit2->mnparm(5, "gamma", arglist[5], 0.0001,0, 0, ierflg); 
+    gMinuit2->mnexcm("SET ERR", arglist ,1,ierflg);
+    gMinuit2->mnparm(0, "A", arglist[0], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(1, "B", arglist[1], 0.0001,0, 0, ierflg);
+    gMinuit2->mnparm(2, "C",arglist[2], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(3, "D",arglist[3], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(4, "N", arglist[4], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(5, "mu", arglist[5], 0.0001,0, 0, ierflg);
+    gMinuit2->mnparm(6, "sigma",arglist[6], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(7, "k", arglist[7], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(8, "mu2", arglist[8], 0.0001,0, 0, ierflg);   
+    gMinuit2->mnparm(9, "gamma", arglist[9], 0.0001,0, 0, ierflg); 
 
     gMinuit2->mnexcm("MIGRAD", arglist , 0,ierflg);
     
@@ -137,7 +137,7 @@ void myminimizer(Double_t *par, Double_t *err)
 
 //                     ----------------------------------------------------
 
-void oldway()
+void oldway_cuts()
 {
     TH2F *d1 = new TH2F("d1","InvM1 / InvM2",200,0.2,2.5,200,0.2,2.5);
     
@@ -146,7 +146,7 @@ void oldway()
     TH1F *h3 = new TH1F("h3","pz",200,-4,4);
     
     TH2F *d3 = new TH2F("d3","InvM1 / InvM2",200,0.2,2.5,200,0.2,2.5);
-    TH2F *d4 = new TH2F("d4","invM / pT" , 100,0,1.6,100,0.2,3);
+    TH2F *d4 = new TH2F("d4","invM / pT" , 100,0,3,100,0,3);
     TH2F *d5 = new TH2F("d5","dxy / dxy" , 100,-2,2,100,-2,2);
     TH2F *d6 = new TH2F("d6","tdxy / dxy" , 100,-2,2,100,-2,2);
     
@@ -233,7 +233,7 @@ void oldway()
 	    Double_t p3[3] = {px[2],py[2],pz[2]};
             Double_t p4[3] = {px[3],py[3],pz[3]};
 	    
-	    Float_t invM1, invM2,invM3, invM4;
+	    Float_t invM1, invM2,invM3, invM4, dist1, dist2,dist3,dist4;
 	    
 	    if (isP[0] != 2 && isP[1] != 2 && isP[2] != 2 && isP[3] != 2)
 	    {
@@ -253,21 +253,11 @@ void oldway()
 	                       invM3 = calc_InvM(p1,p3);
                                invM4 = calc_InvM(p2,p4);
 			       
-			       d4->Fill(invM1,dxy[0]+dxy[1]);
-			       d4->Fill(invM2,dxy[2]+dxy[3]);
-			       d4->Fill(invM3,dxy[0]+dxy[2]);
-			       d4->Fill(invM4,dxy[1]+dxy[3]);
-			       
-			       if (dist(dxy[0],dz[0],dxy[1],dz[1]) < 0.3 && dist(dxy[2],dz[2],dxy[3],dz[3]) < 0.3)
-			       {
-			           d3->Fill(invM1,invM2);
-			       }
-			       
-			       if (dist(dxy[0],dz[0],dxy[2],dz[2]) < 0.3 && dist(dxy[1],dz[1],dxy[3],dz[3]) < 0.3)
-			       {
-			           d3->Fill(invM3,invM4);
-			       }
-			       
+			       dist1 = TMath::Abs(dxy[0]-dxy[1]);
+			       dist2 = TMath::Abs(dxy[2]-dxy[3]);
+			       dist3 = TMath::Abs(dxy[0]-dxy[2]);
+			       dist4 = TMath::Abs(dxy[1]-dxy[3]);
+       
 
 		           }
 		
@@ -279,20 +269,10 @@ void oldway()
 		               invM3 = calc_InvM(p1,p4);
 	                       invM4 = calc_InvM(p2,p3);
 			       
-			       d4->Fill(invM1,dz[0]+dz[1]);
-			       d4->Fill(invM2,dz[2]+dz[3]);
-			       d4->Fill(invM3,dz[0]+dz[3]);
-			       d4->Fill(invM4,dz[1]+dz[2]);
-			       
-			       if (dist(dxy[0],dz[0],dxy[1],dz[1]) < 0.3 && dist(dxy[2],dz[2],dxy[3],dz[3]) < 0.3)
-			       {
-			           d3->Fill(invM1,invM2);
-			       }
-			       
-			       if (dist(dxy[0],dz[0],dxy[3],dz[3]) < 0.3 && dist(dxy[1],dz[1],dxy[2],dz[2]) < 0.3)
-			       {
-			           d3->Fill(invM3,invM4);
-			       }
+			       dist1 = TMath::Abs(dxy[0]-dxy[1]);
+			       dist2 = TMath::Abs(dxy[2]-dxy[3]);
+			       dist3 = TMath::Abs(dxy[0]-dxy[3]);
+			       dist4 = TMath::Abs(dxy[1]-dxy[2]);
 			      
 		            }
 		
@@ -306,35 +286,30 @@ void oldway()
                                invM3 = calc_InvM(p1,p4);
                                invM4 = calc_InvM(p2,p3);
 			       
-			       d4->Fill(invM1,dz[0]+dz[2]);
-			       d4->Fill(invM2,dz[1]+dz[3]);
-			       d4->Fill(invM3,dz[0]+dz[3]);
-			       d4->Fill(invM4,dz[1]+dz[2]);
-			       
-			       if (dist(dxy[0],dz[0],dxy[2],dz[2]) < 0.3 && dist(dxy[1],dz[1],dxy[3],dz[3]) < 0.3)
-			       {
-			           d3->Fill(invM1,invM2);
-			       }
-			       
-			       if (dist(dxy[0],dz[0],dxy[3],dz[3]) < 0.3 && dist(dxy[1],dz[1],dxy[2],dz[2]) < 0.3)
-			       {
-			           d3->Fill(invM3,invM4);
-			       }
-			       
+			       dist1 = TMath::Abs(dxy[0]-dxy[2]);
+			       dist2 = TMath::Abs(dxy[1]-dxy[3]);
+			       dist3 = TMath::Abs(dxy[0]-dxy[3]);
+			       dist4 = TMath::Abs(dxy[1]-dxy[2]);
+
 	                 }
 		   
-		   
+		        d4->Fill(pt[0]+pt[1]+pt[2]+pt[3],dist1);
+			d4->Fill(pt[0]+pt[1]+pt[2]+pt[3],dist2);
+			d4->Fill(pt[0]+pt[1]+pt[2]+pt[3],dist3);
+			d4->Fill(pt[0]+pt[1]+pt[2]+pt[3],dist4);
+			
 		   
 		       
 			
 	                d1->Fill(invM1,invM2);
-		        if (TMath::Abs(invM1-mrho) < 1.25)
+		        if (TMath::Abs(invM1-0.74) < 0.5 && dist1 < 0.3 & dist2 < 0.3 && pt[0]+pt[1]+pt[2]+pt[3] < 2.2 && pt[0]+pt[1]+pt[2]+pt[3] > 0.8)
 		        {
 		             h4->Fill(invM2);
+			     d3->Fill(invM1,invM2);
 			     
 			     
 			     num_entries += 1;
-			     if (TMath::Abs(invM2-0.745) < 3*0.07)
+			     if (TMath::Abs(invM2-0.74) < 0.068)
 			     {
 			         h5->Fill(calc_fourmass(p1,p2,p3,p4));
 			     }
@@ -342,11 +317,13 @@ void oldway()
 		         }
 	         
 	                d1->Fill(invM3,invM4);
-		        if (TMath::Abs(invM3-mrho) < 1.25)
+		        if (TMath::Abs(invM3-0.74) < 0.5 && dist3 < 0.3 & dist4 < 0.3 && pt[0]+pt[1]+pt[2]+pt[3] < 2.2 && pt[0]+pt[1]+pt[2]+pt[3] > 0.8)
 		        {
 		             h4->Fill(invM4);
+			     d3->Fill(invM3,invM4);
+			     
 			     num_entries += 1;
-			     if (TMath::Abs(invM4-0.745) < 3*0.07)
+			     if (TMath::Abs(invM4-0.74) < 0.068)
 			     {
 			         Double_t p1[3] = {px[0],py[0],pz[0]};
 				 Double_t p2[3] = {px[1],py[1],pz[1]};
