@@ -17,8 +17,8 @@ struct VarData {
 TFile *file1 = new TFile("/eos/cms/store/group/phys_smp/CMS_TOTEM/ntuples/data/TOTEM43.root","read");
 TTree *my_tree = (TTree*)file1->Get("tree");
 
-TH1F *h4 = new TH1F("h4","h4", 200,0.2,1.4);
-TH1F *h5 = new TH1F("h5","h5", 100,0.4,3);
+TH1F *h6 = new TH1F("h6","h6", 200,0.2,1.4);
+TH1F *h7 = new TH1F("h7","two-mass", 200,0.24,1.6);
 
 
      //  Handy functions     ----------------------------------------------------
@@ -61,53 +61,6 @@ Double_t calc_fourmass(Double_t *p1, Double_t *p2,Double_t *p3,Double_t *p4)
 
 Int_t count = 0;
 
-double calculateMean(const std::vector<double>& values) 
-{
-    double sum = 0.0;
-    for (double value : values) 
-    {
-        sum += value;
-    }
-    return sum / values.size();
-}
-
-double calculateStandardDeviation(const std::vector<double>& values, double mean) 
-{    
-    double sumSquaredDifferences = 0.0;
-    for (double value : values) 
-    {
-        double difference = value - mean;
-        sumSquaredDifferences += difference * difference;
-    }
-    double variance = sumSquaredDifferences / values.size();
-    return std::sqrt(variance);
-}
-
-double calculateMedian(std::vector<double>& values) 
-{
-    size_t n = values.size();
-    std::sort(values.begin(), values.end());
-    if (n % 2 == 0) 
-    {
-        return (values[n / 2 - 1] + values[n / 2]) / 2.0;
-    } else {
-        return values[n / 2];
-    }
-}
-
-double calculateMAD(std::vector<double>& values, double median)
- {
-    std::vector<double> absoluteDeviations;
-    for (double value : values) 
-    {
-        absoluteDeviations.push_back(std::abs(value - median));
-    }
-    return calculateMedian(absoluteDeviations);
-}
-
-
-
-
 
      //  fit functions         ----------------------------------------------------
 
@@ -126,7 +79,7 @@ Double_t background(Float_t x,Double_t *par)
 
 Double_t totalfit(Float_t x,Double_t *par)
 {
-   Double_t bp[4] = { 6.06557e+04,2.55558e-01,9.25427e-01,3.92736e+00};
+   Double_t bp[4] = { 1.23189e+04,2.47533e-01,8.05796e-01,3.77877e+00};
    //Double_t pars1[4] = {par[0],par[1],par[2],par[3]};
    Double_t pars2[3] = {par[0],par[1],par[2]};
    Double_t pars3[3] = {par[3],par[4],par[5]};
@@ -192,11 +145,11 @@ void fcn(Int_t &npar, double *gin, double &f, double *par, int iflag)
    Double_t err;
    Double_t dx;
    numbins = 0;
-   for(unsigned int i = 0 ; i < h4->GetNbinsX(); ++i)
+   for(unsigned int i = 0 ; i < h6->GetNbinsX(); ++i)
   {    
-       xval = h4->GetBinCenter(i);
-       yval = h4->GetBinContent(i);
-       err = h4->GetBinError(i);
+       xval = h7->GetBinCenter(i);
+       yval = h7->GetBinContent(i);
+       err = h7->GetBinError(i);
        if (yval > 0 && xval > 0.3)
        {
           dx = (totalfit(xval, par) - yval)/err;
@@ -209,12 +162,12 @@ void fcn(Int_t &npar, double *gin, double &f, double *par, int iflag)
 }
 
 
-const Int_t numpar = 4;
+const Int_t numpar = 6;
 Int_t num_entries = 0;
 
 void myminimizer(Double_t *par, Double_t *err)
 {
-    Double_t arglist[6] = {1.34362e+03,7.49886e-01,6.04308e-02,1.25633e+03,4.97597e-01,1.80171e-02};
+    Double_t arglist[numpar] = {1.97250e+02,6.97620e-01,1.25601e-01,100,0.5,0.01};
     
     TMinuit *gMinuit2 = new TMinuit(10);
     gMinuit2->SetFCN(fcn);
@@ -235,28 +188,51 @@ void myminimizer(Double_t *par, Double_t *err)
 
     gMinuit2->mnexcm("MIGRAD", arglist , 2,ierflg);
     
-    for (int j = 0; j < 6; j++)
+    for (int j = 0; j < numpar; j++)
     {
        gMinuit2->GetParameter(j,par[j],err[j]);
     }
 }
 
 
-void rank_arr(Int_t *index, Double_t *arr, Int_t len) 
+void rank_arr(std::vector<int>& index, const std::vector<double>& arr) 
 {
+    int len = arr.size();
+    index.resize(len);
     for (int i = 0; i < len; i++) 
     {
-        int indx = -1;
-        int rank = 0;
+	int rank = 0;
         for (int j = 0; j < len; j++) 
 	{
-            if (arr[j] < arr[i]) 
+	    if (arr[j] < arr[i]) 
 	    {
                 rank++;
             }
         }
-
         index[i] = rank;
+    }
+}
+
+void invertArray(std::vector<int>& arr) 
+{
+    std::vector<int> narr(arr);
+    for (int i = 0; i < arr.size(); i++)
+    {
+        int count = 0;
+	for (int j = 0; j < arr.size(); j++)
+        {
+            if (narr[j] == i)
+	    {
+	        arr[i] = count;
+		break;
+	    }
+	    
+	    else
+	    {
+	        count += 1;
+	    }
+        }    
+   
     }
 }
 
@@ -276,10 +252,8 @@ void multitrack_cuts()
     TH2F *his5 = new TH2F("his5","Delta dz",100,0,4,100,0.2,1.6);
     TH2F *his6 = new TH2F("his6","Dist dxyz",100,0,4,100,0.2,1.6);
     
-    TH1F *h6 = new TH1F("h6","two-mass", 200,0.24,1.4);
-    TH1F *h7 = new TH1F("h7","two-mass", 200,0.24,1.4);
     
-    TH1F *h8 = new TH1F("h8","all two-mass", 200,0.24,1.4);
+    TH1F *h8 = new TH1F("h8","all two-mass", 200,0.24,1.6);
     
     
     TH2F *d2 = new TH2F("d2","two-mass / two-mass",100,0.2,2,100,0.2,2);
@@ -384,35 +358,44 @@ void multitrack_cuts()
 	    Double_t p4[3] = {px[3],py[3],pz[3]};
 	    Double_t p5[3] = {px[4],py[4],pz[4]};
 	    
-	    Int_t rank_dxy[track];
-	    Int_t rank_dz[track];
-	    Int_t rank_dist[track];
-	    Double_t dxys[track];
-	    Double_t dzs[track];
-	    Double_t dds[track];
+	    std::vector <int> rank_dxy;
+	    std::vector <int> rank_dz;
+	    std::vector <int> rank_dist;
 	    
+	    std::vector <double> dxys;
+	    std::vector <double> dzs;
+	    std::vector <double> dds;
 	    
-	    std::vector<double> dxyv;
-	    std::vector<double> dzv;
-	    std::vector<double> ddv;
+
+	   
 	    
 	    for (int i = 0; i < track; i++)
 	    {
-	        dxys[i] =  TMath::Abs(dxy[i]);
-		dzs[i] =  TMath::Abs(dz[i]);
-		dds[i] = TMath::Sqrt(dz[i]*dz[i]+dxy[i]*dxy[i]);
-		dxyv.push_back(TMath::Abs(dxy[i]));
-		dzv.push_back(TMath::Abs(dz[i]));
-		ddv.push_back(TMath::Sqrt(dz[i]*dz[i]+dxy[i]*dxy[i]));
-			    
+	        dxys.push_back(TMath::Abs(dxy[i]));
+		dzs.push_back(TMath::Abs(dz[i]));
+		dds.push_back(TMath::Sqrt(dz[i]*dz[i]+dxy[i]*dxy[i]));
 	    }
-
-	    rank_arr(rank_dxy, dxys, track);
-	    rank_arr(rank_dz, dzs, track);
-	    rank_arr(rank_dist, dds, track);
-
+	    
+	    rank_arr(rank_dxy, dxys);
+	    rank_arr(rank_dz, dzs);
+	    rank_arr(rank_dist, dds);
+	    
+	    
+	    
+	    std::vector <int> Rmap_dxy = rank_dxy;
+	    std::vector <int> Rmap_dz=rank_dz;
+	    std::vector <int> Rmap_dist=rank_dist;
+	    
+	    invertArray(Rmap_dxy);
+	    invertArray(Rmap_dz);
+	    invertArray(Rmap_dist);
 	    
 	    std::vector<VarData> modifmassList;
+	    
+	    //std::cout << Rmap_dxy[0] << " , " << Rmap_dxy[1] << " , " << Rmap_dxy[2] << " , " << Rmap_dxy[3] << " , " << Rmap_dxy[4] << " , " << Rmap_dxy[5] << std::endl;
+	    
+	    //std::cout << dxy[0] << " , " << dxy[1] << " , " << dxy[2] << " , " << dxy[3] << " , " << dxy[4] << " , " << dxy[5] << std::endl;
+	    
 
 	    std::set<int> usedIndices;
 	    bool isFour = false;
@@ -421,12 +404,22 @@ void multitrack_cuts()
 	        bool is_fill = false;
 	        for (int i2 = i1+1; i2 < track; i2++)
 		{
-		    if (q[rank_dz[i1]] + q[rank_dz[i2]] == 0 &&  !is_fill &&
+		    std::cout << i1 << " , " << i2 << std::endl;
+		    std::cout << dz[Rmap_dxy[i1]] << " , " << dz[Rmap_dxy[i2]] << std::endl;
+		    if (q[i1] + q[i2] == 0)
+		    {
+		        Double_t ps[3] = {px[i1],py[i1],pz[i1]};
+	                Double_t ps2[3] = {px[i2],py[i2],pz[i2]};
+			Double_t all_mass = calc_InvM(ps,ps2);
+			h8->Fill(all_mass);
+		    }
+		    
+		    if (q[Rmap_dxy[i1]] + q[Rmap_dxy[i2]] == 0 &&  !is_fill &&
                     usedIndices.find(i1) == usedIndices.end() && usedIndices.find(i2) == usedIndices.end())
 		    {   
 		        
-		        Double_t pm[3] = {px[rank_dz[i1]],py[rank_dz[i1]],pz[rank_dz[i1]]};
-	                Double_t pm2[3] = {px[rank_dz[i2]],py[rank_dz[i2]],pz[rank_dz[i2]]};
+		        Double_t pm[3] = {px[Rmap_dxy[i1]],py[Rmap_dxy[i1]],pz[Rmap_dxy[i1]]};
+	                Double_t pm2[3] = {px[Rmap_dxy[i2]],py[Rmap_dxy[i2]],pz[Rmap_dxy[i2]]};
 		        Double_t mass = calc_InvM(pm,pm2);
 			
 			Double_t total_pt = 0;
@@ -436,15 +429,10 @@ void multitrack_cuts()
 		        }  
 			
 			d3->Fill(mass,zPV);
+
 			
-		 
-		        //if (total_pt > 1.6 && total_pt < 2.7)
-		        {
-			   h8->Fill(mass);
-			}
-			
-			std::vector<double> cur_dxy = {TMath::Abs(dxy[rank_dz[i1]]),TMath::Abs(dxy[rank_dz[i2]])};
-			std::vector<double> cur_dz = {TMath::Abs(dz[rank_dz[i1]]),TMath::Abs(dz[rank_dz[i2]])};
+			std::vector<double> cur_dxy = {TMath::Abs(dxy[Rmap_dxy[i1]]),TMath::Abs(dxy[Rmap_dxy[i2]])};
+			std::vector<double> cur_dz = {TMath::Abs(dz[Rmap_dxy[i1]]),TMath::Abs(dz[Rmap_dxy[i2]])};
 			
 			//std::cout << "Dxy:  " << cur_dxy[0] << " , " << cur_dxy[1] << std::endl;
 			//std::cout << "Dz:  " << cur_dz[0] << " , " << cur_dz[1] << std::endl;
@@ -474,23 +462,20 @@ void multitrack_cuts()
 			
 			else
 			{
-			    isFour1 = isElementFarFromOthers(cur_dxy,dxyv,threshold);
+			    isFour1 = isElementFarFromOthers(cur_dxy,dxys,threshold);
 			}
 			
 			
-			if (TMath::Abs(cur_dz[0]-cur_dz[1]) < threshold*2)
+			if (TMath::Abs(cur_dz[0]-cur_dz[1]) < threshold)
 			{
 			    isFour2 = false;
 			}
 			
 			else
 			{
-			    isFour2 = isElementFarFromOthers(cur_dz,dzv,threshold*2);
+			    isFour2 = isElementFarFromOthers(cur_dz,dzs,threshold*2);
 			}
 			
-			
-			
-			std::cout << isFour2 << "| " << cur_dz[0] << " , " << cur_dz[1] << "| " << dzv_cut[0] <<" , " << dzv_cut[1] << " , " <<dzv_cut[2] <<" , " << dzv_cut[3] << std::endl; 
 	    
 	                if (isFour1 == true || isFour2 == true)
 	                {
@@ -518,7 +503,9 @@ void multitrack_cuts()
 		    }
 		    
                } 
-	    } 
+	    }
+	    
+	    std::cout << "Next" << std::endl; 
 		    
 		   
 	   
@@ -553,22 +540,22 @@ void multitrack_cuts()
 	         total_pt += pt[l];
 	     } 
 	     
-	     if (total_pt < 1.6 || total_pt > 2.6)
-	     {
-	         continue;
-	     }
+	     //if (total_pt < 1.6 || total_pt > 2.6)
+	     //{
+	     //    continue;
+	     //}
 	     
 	     
 	     if (o_vars.size() == 2)
 	     {
 	         d1->Fill(o_vars[0],o_vars[1]);
 	     
-	         if (TMath::Abs(o_vars[0]-0.74) < 0.4)
+	         if (TMath::Abs(o_vars[0]-0.74) < 1)
 		 {
 	             h6->Fill(o_vars[1]);
 		 }
 		 
-		 if (TMath::Abs(o_vars[1]-0.74) < 0.4)
+		 if (TMath::Abs(o_vars[1]-0.74) < 1)
 		 {
 	             h6->Fill(o_vars[0]);
 		 }
@@ -579,21 +566,7 @@ void multitrack_cuts()
 	     if (o_vars.size() == 3)
 	     {
 		 
-		 
-		 Double_t total_pt = 0;
-		 for (int l = 0; l < track; l++)
-		 {
-		     total_pt += pt[l];
-		 } 
-		 
-		 //h6->Fill(o_vars[0]);
-		 //h6->Fill(o_vars[1]);
-		 //h6->Fill(o_vars[2]);
-		 
-		 
-		 
-		 
-		 
+
 		 //d3->Fill(o_vars[0],TMath::MaxElement(6,pts));
 		 //d3->Fill(o_vars[1],TMath::MaxElement(6,pts));
 		 //d3->Fill(o_vars[2],TMath::MaxElement(6,pts));
@@ -601,7 +574,7 @@ void multitrack_cuts()
 		 
 		 
 		 
-		 if (TMath::Abs(o_vars[0]-0.74) < 0.4)
+		 if (TMath::Abs(o_vars[0]-0.74) < 1)
 		 {
 		     d1->Fill(o_vars[1],o_vars[2]);
 		     h6->Fill(o_vars[1]);
@@ -609,7 +582,7 @@ void multitrack_cuts()
 
 		 }
 		 
-		 if (TMath::Abs(o_vars[1]-0.74) < 0.4)
+		 if (TMath::Abs(o_vars[1]-0.74) < 1)
 		 {
 		     d1->Fill(o_vars[0],o_vars[2]);
 		     h6->Fill(o_vars[0]);
@@ -617,7 +590,7 @@ void multitrack_cuts()
 
 		 }
 		 
-		 if (TMath::Abs(o_vars[2]-0.74) < 0.4)
+		 if (TMath::Abs(o_vars[2]-0.74) < 1)
 		 {
 		     d1->Fill(o_vars[0],o_vars[1]);
 		     
@@ -636,16 +609,9 @@ void multitrack_cuts()
 	     {
 
 		 d2->Fill(m_vars[0],m_vars[1]);
+	         h7->Fill(m_vars[1]);
+	         h7->Fill(m_vars[0]);
 		 
-		 if (TMath::Abs(m_vars[0]-0.74) < 0.4)
-		 {
-	             h7->Fill(m_vars[1]);
-		 }
-		 
-		 if (TMath::Abs(m_vars[1]-0.74) < 0.4)
-		 {
-	             h7->Fill(m_vars[0]);
-		 }
 	     
 	     }
 	     
@@ -660,7 +626,7 @@ void multitrack_cuts()
 		 
 		 
 		 
-		 if (TMath::Abs(m_vars[0]-0.740) < 0.4)
+		 if (TMath::Abs(m_vars[0]-0.740) < 1)
 		 {
 		     d2->Fill(m_vars[1],m_vars[2]);
 		     h7->Fill(m_vars[1]);
@@ -668,7 +634,7 @@ void multitrack_cuts()
 
 		 }
 		 
-		 if (TMath::Abs(m_vars[1]-0.740) < 0.4)
+		 if (TMath::Abs(m_vars[1]-0.740) < 1)
 		 {
 		     d2->Fill(m_vars[0],m_vars[2]);
 		     
@@ -676,7 +642,7 @@ void multitrack_cuts()
 		     h7->Fill(m_vars[2]);
 		 }
 		 
-		 if (TMath::Abs(m_vars[2]-0.740) < 0.4)
+		 if (TMath::Abs(m_vars[2]-0.740) < 1)
 		 {
 		     d2->Fill(m_vars[0],m_vars[1]);
 		     
@@ -753,37 +719,107 @@ void multitrack_cuts()
     c3->cd(2); Yhist->Draw("E1");
     Yhist2->Draw("SAMEE1");
     
+    
+    Xhist2->SetLineColor(kRed);
+    Yhist2->SetLineColor(kRed);
+   
+    TCanvas *c5 = new TCanvas("c5","c5",800,600);
+    h6->SetTitle("Outliers; Inv. Mass [GeV] ; ");
+    h6->Draw("E1");
+    h7->Draw("SAMEE1");
+    
+    h6->SetLineColor(kBlue);
+    h7->SetLineColor(kRed);
+    
     auto legend2 = new TLegend(0.64,0.4,0.99,0.78);
     legend2->AddEntry(Yhist,"With outliers","lep");
     legend2->AddEntry(Yhist2,"Without outliers","lep");
     legend2->SetTextSize(0.028);
     legend2->Draw();
     
-    Xhist2->SetLineColor(kRed);
-    Yhist2->SetLineColor(kRed);
-   
-    TCanvas *c5 = new TCanvas("c5","c5",800,600);
-    
-    d3->Draw("Colz");
-    
     
     
     
     TCanvas *c6 = new TCanvas("c6","c6",800,600);
-    h6->Draw("E1");
     h7->Draw("SAMEE1");
     
-    auto legend6 = new TLegend(0.64,0.4,0.99,0.78);
-    legend6->AddEntry(h6,"With outliers","lep");
-    legend6->AddEntry(h7,"Without outliers","lep");
-    legend6->SetTextSize(0.028);
-    legend6->Draw();
     
-    h7->SetLineColor(kRed);
+    //h6->SetLineColor(kRed);
    
     
     
     h8->SetTitle("Six-track: Pairings; Invariant Mass1 [GeV] ; ");
+    
+    Double_t params[10];
+    Double_t errs[10];
+    myminimizer(params,errs);
+    Double_t x[1400], y[1400];
+    
+    for (Int_t i=0;i< 1400;i++) 
+    {
+        x[i] = 0.26+i*0.005;
+        y[i] = totalfit(x[i],params);
+     }
+
+    auto g2 = new TGraph(1400,x,y);
+    g2->SetLineWidth(2);
+    g2->SetLineColor(kRed);
+    g2->Draw("SAME");
+    
+    Double_t x1[300], y1[300];
+    for (Int_t i=0;i< 300;i++) 
+    {
+        Double_t params1[3] = {params[3],params[4],params[5]};
+        x1[i] = 0.40+i*0.00065;
+        y1[i] = gauss(x1[i],params1);
+     }
+
+    auto g3 = new TGraph(300,x1,y1);
+    g3->SetLineWidth(2);
+    g3->SetLineColor(kGreen);
+    g3->Draw("SAME");
+    
+    
+    Double_t x2[500], y2[500];
+    for (Int_t i=0;i< 500;i++) 
+    {
+        x2[i] = 0.4+i*0.0015;
+	Double_t params2[3] = {params[0],params[1],params[2]};
+        y2[i] = gauss(x2[i],params2);
+     }
+
+    auto g4 = new TGraph(500,x2,y2);
+    g4->SetLineWidth(2);
+    g4->SetLineColor(kGreen);
+    g4->Draw("SAME");
+    
+    for (Int_t i=0;i< 300;i++) 
+    {
+        Double_t back_params[4] = {1.23189e+04,2.47533e-01,8.05796e-01,3.77877e+00};
+        y[i] = background(x[i],back_params);
+     }
+
+    auto g5 = new TGraph(1400,x,y);
+    g5->SetLineWidth(2);
+    g5->SetLineColor(kBlue);
+    g5->Draw("SAME");
+    
+     auto legend6 = new TLegend(0.64,0.26,0.99,0.78);
+    //legend->SetHeader("Fit","C");
+    legend6->AddEntry(h7,"Data","lep");
+    legend6->AddEntry(g5,"Background: A(x-B)^{C}exp(-Dx)","l");
+    legend6->AddEntry(g3,"#splitline{Kaon peak:}{#mu = 0.50 #pm 0.02 GeV}","l");
+    legend6->AddEntry(g4,"#splitline{Rho peak:}{ #mu = 0.70 #pm 0.05 GeV} ","l");
+    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 377 / 179","l");
+    legend6->SetTextSize(0.028);
+    legend6->Draw();
+   
+    
+    
+    
+     h7->SetTitle("; Inv Mass [GeV] ; ");
+    
+     std::cout << "Number of bins: " << "  "  << numbins << std::endl;
     
     
 }
