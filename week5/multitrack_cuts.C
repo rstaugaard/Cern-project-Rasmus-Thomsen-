@@ -5,12 +5,13 @@
 #include <TTree.h>
 #include <vector>
 #include <utility>
+#include <algorithm>
 
 struct VarData {
     int i;
     int j;
     Double_t var;
-    Double_t angle1;
+    bool isFour;
 };
 
 TFile *file1 = new TFile("/eos/cms/store/group/phys_smp/CMS_TOTEM/ntuples/data/TOTEM43.root","read");
@@ -60,7 +61,7 @@ Double_t calc_fourmass(Double_t *p1, Double_t *p2,Double_t *p3,Double_t *p4)
 
 Int_t count = 0;
 
-double calculateMean(const std::vector<int>& values) 
+double calculateMean(const std::vector<double>& values) 
 {
     double sum = 0.0;
     for (double value : values) 
@@ -70,34 +71,41 @@ double calculateMean(const std::vector<int>& values)
     return sum / values.size();
 }
 
-double calc_correlation(const std::vector<int>& x, const std::vector<int>& y) 
-{
-    if (x.size() != y.size() || x.empty()) 
+double calculateStandardDeviation(const std::vector<double>& values, double mean) 
+{    
+    double sumSquaredDifferences = 0.0;
+    for (double value : values) 
     {
-        throw std::invalid_argument("Both vectors must have the same non-zero size.");
+        double difference = value - mean;
+        sumSquaredDifferences += difference * difference;
     }
-
-    double meanX = calculateMean(x);
-    double meanY = calculateMean(y);
-
-    double numerator = 0.0;
-    double denomX = 0.0;
-    double denomY = 0.0;
-
-    for (size_t i = 0; i < x.size(); ++i) {
-        numerator += (x[i] - meanX) * (y[i] - meanY);
-        denomX += std::pow(x[i] - meanX, 2);
-        denomY += std::pow(y[i] - meanY, 2);
-    }
-
-    double denominator = std::sqrt(denomX) * std::sqrt(denomY);
-
-    if (denominator == 0.0) {
-        return 0.0; // If denominator is 0, correlation is not defined, return 0.
-    }
-
-    return numerator / denominator;
+    double variance = sumSquaredDifferences / values.size();
+    return std::sqrt(variance);
 }
+
+double calculateMedian(std::vector<double>& values) 
+{
+    size_t n = values.size();
+    std::sort(values.begin(), values.end());
+    if (n % 2 == 0) 
+    {
+        return (values[n / 2 - 1] + values[n / 2]) / 2.0;
+    } else {
+        return values[n / 2];
+    }
+}
+
+double calculateMAD(std::vector<double>& values, double median)
+ {
+    std::vector<double> absoluteDeviations;
+    for (double value : values) 
+    {
+        absoluteDeviations.push_back(std::abs(value - median));
+    }
+    return calculateMedian(absoluteDeviations);
+}
+
+
 
 
 
@@ -136,6 +144,41 @@ Double_t angle(Double_t *p1, Double_t *p2)
 {
     return (((p1[0]*p2[0]+p1[1]*p2[1])/(TMath::Sqrt(p1[0]*p1[0]+p1[1]*p1[1]+p1[2]*p1[2])*TMath::Sqrt(p2[0]*p2[0]+p2[1]*p2[1]+p2[2]*p2[2]))));
 }
+
+
+
+bool isElementFarFromOthers(const std::vector<double>& data,const std::vector<double>& comp, double threshold) 
+{
+    bool isFarFromOthers = false;
+    for (size_t i = 0; i < data.size(); ++i) 
+    {
+        double currentElement = data[i];
+        for (size_t j = 0; j < comp.size(); ++j) 
+	{
+            double difference = TMath::Abs(currentElement - comp[j]);
+            if (difference <= threshold) 
+            {
+                isFarFromOthers = true;
+                break;
+            }
+            
+        }
+
+        
+    }
+    
+    if  (isFarFromOthers == true)
+    { 
+         return true;
+    }
+  
+    else
+    {
+         return false;
+    }
+  
+}
+
 
 Int_t numbins;
  
@@ -223,7 +266,7 @@ void rank_arr(Int_t *index, Double_t *arr, Int_t len)
 
 void multitrack_cuts()
 {
-    TH2F *d1 = new TH2F("d1","two-mass / two-mass",100,0.2,2,100,0.8,4);
+    TH2F *d1 = new TH2F("d1","two-mass / two-mass",100,0.2,2,100,0.2,2);
     
     TH1F *h1 = new TH1F("h1","px",200,-4,4);   
     TH1F *h2 = new TH1F("h2","py",200,-2,2);
@@ -233,13 +276,15 @@ void multitrack_cuts()
     TH2F *his5 = new TH2F("his5","Delta dz",100,0,4,100,0.2,1.6);
     TH2F *his6 = new TH2F("his6","Dist dxyz",100,0,4,100,0.2,1.6);
     
-    TH1F *h6 = new TH1F("h6","two-mass", 200,0.24,1.6);
-    TH1F *h6ex = new TH1F("h6ex","two-mass", 100,0.2,1.4);
+    TH1F *h6 = new TH1F("h6","two-mass", 200,0.24,1.4);
+    TH1F *h7 = new TH1F("h7","two-mass", 200,0.24,1.4);
     
-    TH1F *h7 = new TH1F("h7","Angle", 100,-1,1);
-    TH2F *d2 = new TH2F("d2","two-mass / pt",100,0.2,2,100,0.2,3);
-    TH2F *d3 = new TH2F("d3","three-mass / pt" , 5,0,4,5,0,4);
-    TH2F *d4 = new TH2F("d4","dxy used to pair " , 100,0.2,2,100,0.2,2);
+    TH1F *h8 = new TH1F("h8","all two-mass", 200,0.24,1.4);
+    
+    
+    TH2F *d2 = new TH2F("d2","two-mass / two-mass",100,0.2,2,100,0.2,2);
+    TH2F *d3 = new TH2F("d3","two-mass / pT" , 80,0.2,1.4,80,-15,15);
+    TH2F *d4 = new TH2F("d4","all pairs " , 100,0.2,2,100,0.2,2);
     TH2F *d5 = new TH2F("d5","dxy / dxy" , 100,0,4,100,0,4);
     TH2F *d6 = new TH2F("d6","dxy / dxy" , 100,0,4,100,0,4);
     TH2F *d7 = new TH2F("d7","Angle / two-mass" , 100,0,3,100,-1,1);
@@ -249,8 +294,6 @@ void multitrack_cuts()
     
     static Float_t trk_pt[420], trk_eta[420], trk_phi[420], trk_dedx[420], trk_p[420], trk_dxy[420], trk_dz[420];
     static Int_t trk_isK[420], trk_isPi[420], trk_isP[420];
-    
-    std::vector<int> dxyR; std::vector<int> dzR;
     
     static Float_t ThxR, ThxL, ThyR, ThyL, zPV;
     static Int_t trk_q[420];
@@ -328,9 +371,9 @@ void multitrack_cuts()
 		continue;
 	    }
 	    
-	    h1->Fill(px[0]+px[1]+px[2]+px[3]+px[4]-6500*(ThxL+ThxR));
-	    h2->Fill(py[0]+py[1]+py[2]+py[3]+py[4]+6500*(ThyL+ThyR));
-	    h3->Fill(pz[0]+pz[1]+pz[2]+pz[3]+pz[4]);
+	    h1->Fill(px[0]+px[1]+px[2]+px[3]+px[4]+px[5]-6500*(ThxL+ThxR));
+	    h2->Fill(py[0]+py[1]+py[2]+py[3]+py[4]+py[5]+6500*(ThyL+ThyR));
+	    h3->Fill(pz[0]+pz[1]+pz[2]+pz[3]+pz[4]+pz[5]);
 		
 	    
 	    Double_t invM1, invM2,invM3, invM4;
@@ -343,31 +386,36 @@ void multitrack_cuts()
 	    
 	    Int_t rank_dxy[track];
 	    Int_t rank_dz[track];
+	    Int_t rank_dist[track];
 	    Double_t dxys[track];
 	    Double_t dzs[track];
+	    Double_t dds[track];
+	    
+	    
+	    std::vector<double> dxyv;
+	    std::vector<double> dzv;
+	    std::vector<double> ddv;
 	    
 	    for (int i = 0; i < track; i++)
 	    {
 	        dxys[i] =  TMath::Abs(dxy[i]);
 		dzs[i] =  TMath::Abs(dz[i]);
+		dds[i] = TMath::Sqrt(dz[i]*dz[i]+dxy[i]*dxy[i]);
+		dxyv.push_back(TMath::Abs(dxy[i]));
+		dzv.push_back(TMath::Abs(dz[i]));
+		ddv.push_back(TMath::Sqrt(dz[i]*dz[i]+dxy[i]*dxy[i]));
+			    
 	    }
-	    
+
 	    rank_arr(rank_dxy, dxys, track);
 	    rank_arr(rank_dz, dzs, track);
-	    
-	    for (int k = 0; k < track; k++)
-	    {
-	        dxyR.push_back(rank_dxy[k]);
-		dzR.push_back(rank_dz[k]);
-		
-		//std::cout << "---" << rank_dxy[0]<< " , " << rank_dxy[1] << " , "<< rank_dxy[2] << " , " << rank_dxy[3] << std::endl;
-		//std::cout << dxy[0]<< " , " << dxy[1] << " , "<< dxy[2] << " , " << dxy[3] << std::endl;
-		d3->Fill(rank_dxy[k],rank_dz[k]);
-	    }
+	    rank_arr(rank_dist, dds, track);
+
 	    
 	    std::vector<VarData> modifmassList;
 
 	    std::set<int> usedIndices;
+	    bool isFour = false;
 	    for (int i1 = 0; i1 < track; i1++)
 	    {
 	        bool is_fill = false;
@@ -379,17 +427,84 @@ void multitrack_cuts()
 		        
 		        Double_t pm[3] = {px[rank_dz[i1]],py[rank_dz[i1]],pz[rank_dz[i1]]};
 	                Double_t pm2[3] = {px[rank_dz[i2]],py[rank_dz[i2]],pz[rank_dz[i2]]};
-			Double_t angle1 = TMath::Sqrt((pm[0]+pm2[0])*(pm[0]+pm2[0])+(pm[1]+pm2[1])*(pm[1]+pm2[1])+(pm[2]+pm2[2])*(pm[2]+pm2[2]));
 		        Double_t mass = calc_InvM(pm,pm2);
 			
-			if ((zPV < -1 || zPV > 1))
+			Double_t total_pt = 0;
+		        for (int l = 0; l < track; l++)
+		        {
+		            total_pt += pt[l];
+		        }  
+			
+			d3->Fill(mass,zPV);
+			
+		 
+		        //if (total_pt > 1.6 && total_pt < 2.7)
+		        {
+			   h8->Fill(mass);
+			}
+			
+			std::vector<double> cur_dxy = {TMath::Abs(dxy[rank_dz[i1]]),TMath::Abs(dxy[rank_dz[i2]])};
+			std::vector<double> cur_dz = {TMath::Abs(dz[rank_dz[i1]]),TMath::Abs(dz[rank_dz[i2]])};
+			
+			//std::cout << "Dxy:  " << cur_dxy[0] << " , " << cur_dxy[1] << std::endl;
+			//std::cout << "Dz:  " << cur_dz[0] << " , " << cur_dz[1] << std::endl;
+			 
+			
+			std::vector<double> dxyv_cut;
+	                std::vector<double> dzv_cut;
+	    
+	                for (int i = 0; i < track; i++)
+	                {
+	                    if (i != rank_dz[i1] && i != rank_dz[i2])
+			    {
+		                dxyv_cut.push_back(TMath::Abs(dxy[i]));
+		                dzv_cut.push_back(TMath::Abs(dz[i]));
+			    }
+	                }
+			
+			Double_t threshold = 0.6;
+			
+			bool isFour1;
+	                bool isFour2;
+			
+			if (TMath::Abs(cur_dxy[0]-cur_dxy[1]) < threshold)
 			{
-			    modifmassList.push_back({i1, i2, mass,angle1});
+			    isFour1 = false;
 			}
 			
 			else
 			{
-			    modifmassList.push_back({i1, i2, 0,angle1});
+			    isFour1 = isElementFarFromOthers(cur_dxy,dxyv,threshold);
+			}
+			
+			
+			if (TMath::Abs(cur_dz[0]-cur_dz[1]) < threshold*2)
+			{
+			    isFour2 = false;
+			}
+			
+			else
+			{
+			    isFour2 = isElementFarFromOthers(cur_dz,dzv,threshold*2);
+			}
+			
+			
+			
+			std::cout << isFour2 << "| " << cur_dz[0] << " , " << cur_dz[1] << "| " << dzv_cut[0] <<" , " << dzv_cut[1] << " , " <<dzv_cut[2] <<" , " << dzv_cut[3] << std::endl; 
+	    
+	                if (isFour1 == true || isFour2 == true)
+	                {
+	                    isFour = true;
+	                }
+			
+			//if ((zPV < -1 || zPV > 1))
+			{
+			    modifmassList.push_back({i1, i2, mass,isFour});
+			}
+			
+			//else
+			{
+			//    modifmassList.push_back({i1, i2, 0,0});
 			}
 			usedIndices.insert(i1);
                         usedIndices.insert(i2);
@@ -399,7 +514,7 @@ void multitrack_cuts()
 		    
 		    else
 		    {
-			modifmassList.push_back({i1, i2, 0,0});
+			modifmassList.push_back({i1, i2, 0,isFour});
 		    }
 		    
                } 
@@ -407,63 +522,175 @@ void multitrack_cuts()
 		    
 		   
 	   
-            std::vector<double> vars;
+            std::vector<double> o_vars;
+	    std::vector<double> m_vars;
 	    std::set<int> Indices;
 	    for (size_t idx1 = 0; idx1 < modifmassList.size(); idx1++)
             {
 		 Double_t var1 = modifmassList[idx1].var;
                  int i1 = modifmassList[idx1].i;
                  int j1 = modifmassList[idx1].j;
+		 bool isFour = modifmassList[idx1].isFour;
 		 
 		 if (var1 != 0 && Indices.find(i1) == Indices.end() && Indices.find(j1) == Indices.end())
 		 {  
-		    
-		     vars.push_back(var1);      
-			
 		     Indices.insert(i1);
                      Indices.insert(j1);
+		     o_vars.push_back(var1); 
+		     
+		     if (isFour == false)
+		     {
+		        m_vars.push_back(var1);      
+	             }
+
+
 	         }
-
-
 	     }
 	     
-	     if (vars.size() == 3)
+	     Double_t total_pt = 0;
+             for (int l = 0; l < track; l++)
 	     {
+	         total_pt += pt[l];
+	     } 
+	     
+	     if (total_pt < 1.6 || total_pt > 2.6)
+	     {
+	         continue;
+	     }
+	     
+	     
+	     if (o_vars.size() == 2)
+	     {
+	         d1->Fill(o_vars[0],o_vars[1]);
+	     
+	         if (TMath::Abs(o_vars[0]-0.74) < 0.4)
+		 {
+	             h6->Fill(o_vars[1]);
+		 }
+		 
+		 if (TMath::Abs(o_vars[1]-0.74) < 0.4)
+		 {
+	             h6->Fill(o_vars[0]);
+		 }
+	     
+	     }
+	     
+
+	     if (o_vars.size() == 3)
+	     {
+		 
+		 
 		 Double_t total_pt = 0;
 		 for (int l = 0; l < track; l++)
 		 {
 		     total_pt += pt[l];
 		 } 
 		 
-		 d1->Fill(vars[0],total_pt);
-		 d1->Fill(vars[1],total_pt);
-		 d1->Fill(vars[2],total_pt);
+		 //h6->Fill(o_vars[0]);
+		 //h6->Fill(o_vars[1]);
+		 //h6->Fill(o_vars[2]);
 		 
 		 
-		 if (TMath::Abs(vars[0]-0.74) < 0.07*3 && total_pt > 1.6 && total_pt < 2.8)
+		 
+		 
+		 
+		 //d3->Fill(o_vars[0],TMath::MaxElement(6,pts));
+		 //d3->Fill(o_vars[1],TMath::MaxElement(6,pts));
+		 //d3->Fill(o_vars[2],TMath::MaxElement(6,pts));
+		 
+		 
+		 
+		 
+		 if (TMath::Abs(o_vars[0]-0.74) < 0.4)
 		 {
-		     d2->Fill(vars[1],vars[2]);
-		     h6->Fill(vars[1]);
-		     h6->Fill(vars[2]);
+		     d1->Fill(o_vars[1],o_vars[2]);
+		     h6->Fill(o_vars[1]);
+		     h6->Fill(o_vars[2]);
+
 		 }
 		 
-		 if (TMath::Abs(vars[1]-0.74) < 0.07*3 && total_pt > 1.6 && total_pt < 2.8)
+		 if (TMath::Abs(o_vars[1]-0.74) < 0.4)
 		 {
-		     d2->Fill(vars[0],vars[2]);
-		     h6->Fill(vars[0]);
-		     h6->Fill(vars[2]);
+		     d1->Fill(o_vars[0],o_vars[2]);
+		     h6->Fill(o_vars[0]);
+		     h6->Fill(o_vars[2]);
+
 		 }
 		 
-		 if (TMath::Abs(vars[2]-0.74) < 0.07*3&& total_pt > 1.6 && total_pt < 2.8)
+		 if (TMath::Abs(o_vars[2]-0.74) < 0.4)
 		 {
-		     d2->Fill(vars[0],vars[1]);
-		     h6->Fill(vars[1]);
-		     h6->Fill(vars[0]);
+		     d1->Fill(o_vars[0],o_vars[1]);
+		     
+		     h6->Fill(o_vars[0]);
+		     h6->Fill(o_vars[1]);
+
 		 }
 		 
 		 
 		 
 	     }
+	     
+	     
+	     
+	     if (m_vars.size() == 2)
+	     {
+
+		 d2->Fill(m_vars[0],m_vars[1]);
+		 
+		 if (TMath::Abs(m_vars[0]-0.74) < 0.4)
+		 {
+	             h7->Fill(m_vars[1]);
+		 }
+		 
+		 if (TMath::Abs(m_vars[1]-0.74) < 0.4)
+		 {
+	             h7->Fill(m_vars[0]);
+		 }
+	     
+	     }
+	     
+
+	     if (m_vars.size() == 3)
+	     {
+		 
+		 
+		 //h7->Fill(m_vars[0]);
+		 //h7->Fill(m_vars[1]);
+		 //h7->Fill(m_vars[2]);
+		 
+		 
+		 
+		 if (TMath::Abs(m_vars[0]-0.740) < 0.4)
+		 {
+		     d2->Fill(m_vars[1],m_vars[2]);
+		     h7->Fill(m_vars[1]);
+		     h7->Fill(m_vars[2]);
+
+		 }
+		 
+		 if (TMath::Abs(m_vars[1]-0.740) < 0.4)
+		 {
+		     d2->Fill(m_vars[0],m_vars[2]);
+		     
+		     h7->Fill(m_vars[0]);
+		     h7->Fill(m_vars[2]);
+		 }
+		 
+		 if (TMath::Abs(m_vars[2]-0.740) < 0.4)
+		 {
+		     d2->Fill(m_vars[0],m_vars[1]);
+		     
+		     h7->Fill(m_vars[0]);
+		     h7->Fill(m_vars[1]);
+
+		 }
+		 
+		 
+		 
+	     }
+	     
+	     
+	    
 	     
 	     
 	     
@@ -475,17 +702,14 @@ void multitrack_cuts()
      }
       
    
-    double correlation = calc_correlation(dxyR, dzR);
     
-    std::cout << "Spearman correlation coefficient: " << correlation << std::endl;
-
       
     TCanvas *c1 = new TCanvas("c1","c1",1800,800);
     c1->Divide(3,1);
     d1->SetTitle("Two-mass / Two-mass ; Invariant Mass1 [GeV] ; Invariant Mass2 [GeV]");
     
     gStyle->SetPalette(kCividis);
-    gStyle->SetOptStat(true);
+    gStyle->SetOptStat(false);
     c1->cd(1); h1->Draw();
     c1->cd(2); h2->Draw();
     c1->cd(3); h3->Draw();
@@ -520,8 +744,8 @@ void multitrack_cuts()
     Xhist2->Draw("SAMEE1");
     
     auto legend = new TLegend(0.64,0.4,0.99,0.78);
-    legend->AddEntry(Xhist,"All combinations included","lep");
-    legend->AddEntry(Xhist2,"Pairs combined using dz","lep");
+    legend->AddEntry(Xhist,"With outliers","lep");
+    legend->AddEntry(Xhist2,"Without outliers","lep");
     legend->SetTextSize(0.028);
     legend->Draw();
     
@@ -530,8 +754,8 @@ void multitrack_cuts()
     Yhist2->Draw("SAMEE1");
     
     auto legend2 = new TLegend(0.64,0.4,0.99,0.78);
-    legend2->AddEntry(Yhist,"All combinations included","lep");
-    legend2->AddEntry(Yhist2,"Pairs combined using dz","lep");
+    legend2->AddEntry(Yhist,"With outliers","lep");
+    legend2->AddEntry(Yhist2,"Without outliers","lep");
     legend2->SetTextSize(0.028);
     legend2->Draw();
     
@@ -540,8 +764,26 @@ void multitrack_cuts()
    
     TCanvas *c5 = new TCanvas("c5","c5",800,600);
     
-    h6->Draw("E1");
+    d3->Draw("Colz");
     
+    
+    
+    
+    TCanvas *c6 = new TCanvas("c6","c6",800,600);
+    h6->Draw("E1");
+    h7->Draw("SAMEE1");
+    
+    auto legend6 = new TLegend(0.64,0.4,0.99,0.78);
+    legend6->AddEntry(h6,"With outliers","lep");
+    legend6->AddEntry(h7,"Without outliers","lep");
+    legend6->SetTextSize(0.028);
+    legend6->Draw();
+    
+    h7->SetLineColor(kRed);
+   
+    
+    
+    h8->SetTitle("Six-track: Pairings; Invariant Mass1 [GeV] ; ");
     
     
 }
