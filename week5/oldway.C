@@ -4,8 +4,8 @@ TFile *file1 = new TFile("/eos/cms/store/group/phys_smp/CMS_TOTEM/ntuples/data/T
 TTree *my_tree = (TTree*)file1->Get("tree");
 
 TH1F *h4 = new TH1F("h4","h4", 200,0.2,1.4);
-TH1F *h5 = new TH1F("h5","h5", 100,0.4,3);
-
+TH1F *h5 = new TH1F("h5","h5", 200,0.4,3);
+TH1F *h6 = new TH1F("h6","h6", 200,0.2,1.4);
 
      //  Handy functions     ----------------------------------------------------
 Float_t mpi = 0.1396;
@@ -23,6 +23,15 @@ Double_t calc_InvM(Double_t *p1, Double_t *p2)
     
     return TMath::Sqrt(TMath::Power(E1+E2,2) - TMath::Power(p1[0]+p2[0],2)- TMath::Power(p1[1]+p2[1],2)- TMath::Power(p1[2]+p2[2],2));
 }
+
+Double_t calc_InvM(std::vector<float> p1, std::vector<float> p2)
+{
+    Double_t E1 = calc_E(p1[0],p1[1],p1[2]);
+    Double_t E2 = calc_E(p2[0],p2[1],p2[2]);
+    
+    return TMath::Sqrt(TMath::Power(E1+E2,2) - TMath::Power(p1[0]+p2[0],2)- TMath::Power(p1[1]+p2[1],2)- TMath::Power(p1[2]+p2[2],2));
+}
+
 
 Double_t calc_fourmass(Double_t *p1, Double_t *p2,Double_t *p3,Double_t *p4)
 {
@@ -59,12 +68,12 @@ Double_t background(Float_t x,Double_t *par)
 
 Double_t totalfit(Float_t x,Double_t *par)
 {
-   Double_t bp[4] = {7.37157e+04 , 2.47286e-01,1.13211e+00, 4.88666e+00 };
-   //Double_t pars1[4] = {par[0],par[1],par[2],par[3]};
-   Double_t pars2[3] = {par[0],par[1],par[2]};
-   Double_t pars3[3] = {par[3],par[4],par[5]};
+   Double_t bp[4] = {2.63884e+04,2.61870e-01,1.01429e+00,4.56226e+00 };
+   Double_t pars1[4] = {par[0],par[1],par[2],par[3]};
+   Double_t pars2[3] = {par[4],par[5],par[6]};
+   Double_t pars3[3] = {par[7],par[8],par[9]};
    
-   Double_t value = background(x,bp)+gauss(x,pars2)+breitwigner(x,pars3);
+   Double_t value = background(x,pars1)+gauss(x,pars2)+breitwigner(x,pars3);
    return value;
 }
 
@@ -86,12 +95,12 @@ void fcn(Int_t &npar, double *gin, double &f, double *par, int iflag)
    Double_t err;
    Double_t dx;
    numbins = 0;
-   for(unsigned int i = 0 ; i < h4->GetNbinsX(); ++i)
+   for(unsigned int i = 0 ; i < h6->GetNbinsX(); ++i)
   {    
-       xval = h4->GetBinCenter(i);
-       yval = h4->GetBinContent(i);
-       err = h4->GetBinError(i);
-       if (yval > 0 && xval > 0.25)
+       xval = h6->GetBinCenter(i);
+       yval = h6->GetBinContent(i);
+       err = h6->GetBinError(i);
+       if (yval > 0 && xval > 0.3)
        {
           dx = (totalfit(xval, par) - yval)/err;
           chi2 += (dx*dx);
@@ -102,31 +111,95 @@ void fcn(Int_t &npar, double *gin, double &f, double *par, int iflag)
        f = chi2 ;
 }
 
+struct Particle
+{
+    std::vector<float> momenta;
+    int charge;
+    float dxy; 
+    
+    Particle(const std::vector<float>& m, int c, float d) : momenta(m), charge(c), dxy(d) {}
+};
 
-const Int_t numpar = 6;
+
+std::vector<float> pair_up(Particle p1, Particle p2, Particle p3, Particle p4)
+{
+    float mass1, mass2, mass3, mass4;
+    float DeltaDxy1, DeltaDxy2, DeltaDxy3, DeltaDxy4;
+    
+    if (p1.charge + p2.charge == 0)
+    {
+        mass1 = calc_InvM(p1.momenta, p2.momenta);
+        mass2 = calc_InvM(p3.momenta, p4.momenta);
+        DeltaDxy1 = TMath::Abs(p1.dxy - p2.dxy);
+        DeltaDxy2 = TMath::Abs(p2.dxy - p3.dxy);
+    }
+    else
+    {
+        mass1 = calc_InvM(p1.momenta, p3.momenta);
+        mass2 = calc_InvM(p2.momenta, p4.momenta);
+        DeltaDxy1 = TMath::Abs(p1.dxy - p2.dxy);
+        DeltaDxy2 = TMath::Abs(p2.dxy - p3.dxy);
+    }
+    
+    if (p1.charge + p3.charge == 0)
+    {
+        mass3 = calc_InvM(p1.momenta, p3.momenta);
+        mass4 = calc_InvM(p2.momenta, p4.momenta);
+        DeltaDxy3 = TMath::Abs(p1.dxy - p3.dxy);
+        DeltaDxy4 = TMath::Abs(p2.dxy - p4.dxy);
+    }
+    else
+    {
+        mass3 = calc_InvM(p1.momenta, p4.momenta);
+        mass4 = calc_InvM(p2.momenta, p3.momenta);
+        DeltaDxy3 = TMath::Abs(p1.dxy - p4.dxy);
+        DeltaDxy4 = TMath::Abs(p2.dxy - p3.dxy);
+    }
+    
+    std::vector<float> masses;
+    if (DeltaDxy1 + DeltaDxy2 < DeltaDxy3 + DeltaDxy4)
+    {
+        masses.push_back(mass3);
+        masses.push_back(mass4);
+    }
+    else
+    {
+        masses.push_back(mass1);
+        masses.push_back(mass2);
+    }
+    
+    //h7->Fill(calc_fourmass(p1.momenta,p2.momenta,p3.momenta,p4.momenta));
+    
+    return masses; 
+}
+
+
+
+const Int_t numpar = 10;
 Int_t num_entries = 0;
 
 void myminimizer(Double_t *par, Double_t *err)
 {
-    Double_t arglist[6] = {5.70120e+02, 7.40403e-01, 6.65430e-02,2.68407e+01,4.97216e-01, 2.18391e-02};
+    Double_t arglist[10] = {3.58194e+04,2.56391e-01,1.02463e+00,4.54846e+00,3.71161e+02,7.36327e-01,8.28507e-02,1.26080e+01,4.98838e-01,3.74353e-02
+    };
     
     TMinuit *gMinuit2 = new TMinuit(10);
     gMinuit2->SetFCN(fcn);
     
     Int_t ierflg = 0 ;
-    //gMinuit2->mnexcm("SET ERR", arglist ,1,ierflg);
-    //gMinuit2->mnparm(0, "A", arglist[0], 0.0001, 0, 0, ierflg);
-    //gMinuit2->mnparm(1, "B", arglist[1], 0.0001,0, 0, ierflg);
-    //gMinuit2->mnparm(2, "C",arglist[2], 0.0001, 0, 0, ierflg);
-    //gMinuit2->mnparm(0, "D",arglist[0], 0.0001, 0, 0, ierflg);
-    gMinuit2->mnparm(0, "N", arglist[0], 0.0001, 0, 0, ierflg);
-    gMinuit2->mnparm(1, "mu", arglist[1], 0.0001,0, 0, ierflg);
-    gMinuit2->mnparm(2, "sigma",arglist[2], 0.0001, 0, 0, ierflg);
-    gMinuit2->mnparm(3, "k", arglist[3], 0.0001, 0, 0, ierflg);
-    gMinuit2->mnparm(4, "mu2", arglist[4], 0.0001,0, 0, ierflg);   
-    gMinuit2->mnparm(5, "gamma", arglist[5], 0.0001,0, 0, ierflg); 
+    gMinuit2->mnexcm("SET ERR", arglist ,0,ierflg);
+    gMinuit2->mnparm(0, "A", arglist[0], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(1, "B", arglist[1], 0.0001,0, 0, ierflg);
+    gMinuit2->mnparm(2, "C",arglist[2], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(3, "D",arglist[3], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(4, "N", arglist[4], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(5, "mu", arglist[5], 0.0001,0, 0, ierflg);
+    gMinuit2->mnparm(6, "sigma",arglist[6], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(7, "k", arglist[7], 0.0001, 0, 0, ierflg);
+    gMinuit2->mnparm(8, "mu2", arglist[8], 0.0001,0, 0, ierflg);   
+    gMinuit2->mnparm(9, "gamma", arglist[9], 0.0001,0, 0, ierflg); 
 
-    gMinuit2->mnexcm("MIGRAD", arglist , 0,ierflg);
+    gMinuit2->mnexcm("MINOS", arglist , 0,ierflg);
     
     for (int j = 0; j < numpar; j++)
     {
@@ -235,13 +308,13 @@ void oldway()
 	    
 	    Float_t invM1, invM2,invM3, invM4;
 	    
-	    if (isP[0] != 2 && isP[1] != 2 && isP[2] != 2 && isP[3] != 2)
+	    //if (isP[0] != 2 && isP[1] != 2 && isP[2] != 2 && isP[3] != 2)
 	    {
 	      
-	       if ((isK[0] != 2 || dedx[0] < 4) && (isK[1] != 2 || dedx[1] < 4)&& (isK[2] != 2 || dedx[2] < 4) && (isK[3] != 2 || dedx[3] < 4))
+	       //if ((isK[0] != 2 || dedx[0] < 4) && (isK[1] != 2 || dedx[1] < 4)&& (isK[2] != 2 || dedx[2] < 4) && (isK[3] != 2 || dedx[3] < 4))
 	       {
 	        
-	           if (dedx[0]> 0.5 && dedx[1] > 0.5 && dedx[2] > 0.5 && dedx[3] > 0.5)
+	           //if (dedx[0]> 0.5 && dedx[1] > 0.5 && dedx[2] > 0.5 && dedx[3] > 0.5)
 	           {
 		       if (q[0]+q[1] == 0)
 	               {   
@@ -323,30 +396,51 @@ void oldway()
 			       
 	                 }
 		   
+		         std::vector<float> pn1 = {px[0],py[0],pz[0]};
+                         std::vector<float> pn2 = {px[1],py[1],pz[1]};
+	                 std::vector<float> pn3= {px[2],py[2],pz[2]};
+                         std::vector<float> pn4 = {px[3],py[3],pz[3]};
+			 
+			 double dist[4] = {TMath::Sqrt(dz[0]*dz[0]+dxy[0]*dxy[0]),TMath::Sqrt(dz[1]*dz[1]+dxy[1]*dxy[1]),
+			 TMath::Sqrt(dz[2]*dz[2]+dxy[2]*dxy[2]),TMath::Sqrt(dz[3]*dz[3]+dxy[3]*dxy[3])};
+			 
 		   
-		   
-		       
+		         Particle particle1(pn1,q[0], (pt[0]));
+	                 Particle particle2(pn2,q[1], (pt[1]));
+	                 Particle particle3(pn3,q[2], (pt[2]));
+	                 Particle particle4(pn4,q[3], (pt[3]));
+	    
+	                 std::vector<float> mass = pair_up(particle1,particle2,particle3,particle4);
+	    
+	   
+	    
+	                 d1->Fill(mass[0],mass[1]);
+	    
+	                 if (TMath::Abs(mass[0]-mrho) < 0.15)
+	                 {
+	                    h4->Fill(mass[1]);
+	                 }
 			
-	                d1->Fill(invM1,invM2);
-		        if (TMath::Abs(invM1-mrho) < 1.25)
+	            //    d1->Fill(invM1,invM2);
+		        if (TMath::Abs(invM1-mrho) < 0.15)
 		        {
-		             h4->Fill(invM2);
+		             h6->Fill(invM2);
 			     
 			     
 			     num_entries += 1;
-			     if (TMath::Abs(invM2-0.745) < 3*0.07)
+			     if (TMath::Abs(invM2-0.745) < 3*0.073)
 			     {
 			         h5->Fill(calc_fourmass(p1,p2,p3,p4));
 			     }
 			    
 		         }
 	         
-	                d1->Fill(invM3,invM4);
-		        if (TMath::Abs(invM3-mrho) < 1.25)
+	                //d1->Fill(invM3,invM4);
+		        if (TMath::Abs(invM3-mrho) < 0.15)
 		        {
-		             h4->Fill(invM4);
+		             h6->Fill(invM4);
 			     num_entries += 1;
-			     if (TMath::Abs(invM4-0.745) < 3*0.07)
+			     if (TMath::Abs(invM4-mrho) < 0.4)
 			     {
 			         Double_t p1[3] = {px[0],py[0],pz[0]};
 				 Double_t p2[3] = {px[1],py[1],pz[1]};
@@ -389,6 +483,10 @@ void oldway()
     auto Yhist = d1->ProjectionY(name2);
     Yhist->Sumw2();
     Xhist->Sumw2();
+    
+    Xhist->GetXaxis()->SetRange(0,130);
+    Yhist->GetXaxis()->SetRange(0,130);
+    
      
     Xhist->SetTitle("X-projection; Inv. Mass [GeV] ; ");
     Yhist->SetTitle("Y-projection; Inv. Mass [GeV] ; ");
@@ -453,11 +551,11 @@ void oldway()
     Yhist->SetLineColor(kRed);
      
     TCanvas *fitgraph = new TCanvas("fitgraph","fitgraph",800,600); 
-    h4->Draw("E1");
-    h4->SetTitle(" ; Inv. Mass [GeV] ; ");
+    h6->Draw("E1");
+    h6->SetTitle(" ; Inv. Mass [GeV] ; ");
     TLatex *Tl4 = new TLatex();
     Tl4->SetTextSize(0.075);
-    Tl4->DrawLatex(1.4*0.78,2300*0.86,"#font[22]{CMS}");
+    Tl4->DrawLatex(1.4*0.78,900*0.95,"#font[22]{CMS}");
     
      
     TLatex s2;
@@ -465,7 +563,7 @@ void oldway()
     s2.DrawLatex(0.87*1.4,2301, "#sqrt{s} = 13 #font[22]{TeV}");
 
     h1->SetLineColor(kBlue);
-    h4->SetLineColor(39);
+    h6->SetLineColor(39);
    
    
     Double_t params[10];
@@ -481,7 +579,7 @@ void oldway()
    
     for (Int_t i=0;i< 1400;i++) 
     {
-        x[i] = 0.26+i*0.005;
+        x[i] = 0.27+i*0.002;
         y[i] = totalfit(x[i],params);
      }
 
@@ -493,7 +591,7 @@ void oldway()
     Double_t x1[300], y1[300];
     for (Int_t i=0;i< 300;i++) 
     {
-        Double_t params1[3] = {params[3],params[4],params[5]};
+        Double_t params1[3] = {params[7],params[8],params[9]};
         x1[i] = 0.40+i*0.00065;
         y1[i] = breitwigner(x1[i],params1);
      }
@@ -508,7 +606,7 @@ void oldway()
     for (Int_t i=0;i< 500;i++) 
     {
         x2[i] = 0.5+i*0.00091;
-	Double_t params2[3] = {params[0],params[1],params[2]};
+	Double_t params2[3] = {params[4],params[5],params[6]};
         y2[i] = gauss(x2[i],params2);
      }
 
@@ -517,9 +615,9 @@ void oldway()
     g4->SetLineColor(kGreen);
     g4->Draw("SAME");
     
-    for (Int_t i=0;i< 300;i++) 
+    for (Int_t i=0;i< 1400;i++) 
     {
-        Double_t back_params[4] = {7.37157e+04 , 2.47286e-01,1.13211e+00, 4.88666e+00 };
+        Double_t back_params[4] = {params[0],params[1],params[2],params[3]};
         y[i] = background(x[i],back_params);
      }
 
@@ -528,13 +626,13 @@ void oldway()
     g5->SetLineColor(kBlue);
     g5->Draw("SAME");
     
-    auto legend = new TLegend(0.64,0.26,0.99,0.78);
+    auto legend = new TLegend(0.64,0.3,0.99,0.8);
     //legend->SetHeader("Fit","C");
-    legend->AddEntry(h4,"Data","lep");
+    legend->AddEntry(h6,"Data","lep");
     legend->AddEntry(g5,"Background: A(x-B)^{C}exp(-Dx)","l");
-    legend->AddEntry(g3,"#splitline{Kaon peak:}{ #splitline{#mu = 0.497 #pm 0.001 GeV}{#gamma = 0.021 #pm 0.001 GeV}}","l");
-    legend->AddEntry(g4,"#splitline{Rho peak:}{ #splitline{#mu = 0.741 #pm 0.001 GeV}{#sigma = 0.064 #pm 0.001 GeV}} ","l");
-    legend->AddEntry(g2,"Total fit: Chi2 / NDof : 475 / 175","l");
+    legend->AddEntry(g3,"#splitline{Kaon peak:}{ #splitline{#mu = 0.498 #pm 0.001 GeV}{#gamma = 0.019 #pm 0.005 GeV}}","l");
+    legend->AddEntry(g4,"#splitline{Rho peak:}{ #splitline{#mu = 0.738 #pm 0.002 GeV}{#sigma = 0.073 #pm 0.004 GeV}} ","l");
+    legend->AddEntry(g2,"Total fit: Chi2 / NDof : 235 / 172","l");
     legend->SetTextSize(0.028);
     legend->Draw();
     
@@ -556,8 +654,39 @@ void oldway()
     d4->Draw("Colz");
     d4->SetTitle("Inv. Mass / Total pT; Inv. Mass [GeV] ; Total pT [GeV]");
     
-   
     
+    std::cout << "mu1:" << params[5] << "+-" << errs[5] << std::endl;
+    std::cout << "sigma1:" << params[6] << "+-" << errs[6] << std::endl;
+    std::cout << "mu2:" << params[8] << "+-" << errs[8] << std::endl;
+    std::cout << "gamma:" << params[9] << "+-" << errs[9] << std::endl;
+    std::cout << "Significans rho" << params[4]/errs[4] << std::endl;
+    std::cout << "Significans kaon" << params[7]/errs[7] << std::endl;
+    
+    
+    
+    double residuals[190];
+    double xvals[190];
+    for (int i = 0; i < 200; i++)
+    {
+        double xval = h4->GetBinCenter(i);
+        double yval = h4->GetBinContent(i);
+	if (xval > 0.3)
+	{
+	    residuals[i] = yval-totalfit(xval,params);
+	    xvals[i] = xval;
+	
+	}
+    
+    }
+   
+   
+    TCanvas *c6 = new TCanvas("c6", "c6", 800, 600);
+    h6->Draw("E1");
+   
+   
+    //TCanvas *residual = new TCanvas("res", "res", 800, 600);
+    //TGraph *rgraph = new TGraph(190,xvals,residuals);
+    //rgraph->Draw("AC*"); 
 
     
     
