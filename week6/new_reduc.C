@@ -537,14 +537,14 @@ void new_reduc()
     
     
     Double_t x2[500], y2[500];
-    for (Int_t i=0;i< 500;i++) 
+    for (Int_t i=0;i< 400;i++) 
     {
-        x2[i] = 0.4+i*0.0015;
+        x2[i] = 0.55+i*0.001;
 	Double_t params2[3] = {params[2],params[3],params[4]};
         y2[i] = gauss(x2[i],params2);
      }
 
-    auto g4 = new TGraph(500,x2,y2);
+    auto g4 = new TGraph(400,x2,y2);
     g4->SetLineWidth(2);
     g4->SetLineColor(kGreen);
     g4->Draw("SAME");
