@@ -144,7 +144,7 @@ void fcn(Int_t &npar, double *gin, double &f, double *par, int iflag)
        xval = h6->GetBinCenter(i);
        yval = h6->GetBinContent(i);
        err = h6->GetBinError(i);
-       if (yval > 0 && xval > 0.32)
+       if (yval > 0 && xval > 0.35)
        {
           dx = (totalfit(xval, par) - yval)/err;
           chi2 += (dx*dx);
@@ -161,7 +161,7 @@ Int_t num_entries = 0;
 
 void myminimizer(Double_t *par, Double_t *err)
 {
-    Double_t arglist[numpar] = {            6.58772e+02,3.05219e-01,3.33439e-01,2.82351e+00,5.03231e+01,6.99653e-01,1.09209e-01,3.55524e+01,5.03884e-01,1.85025e-02};
+    Double_t arglist[numpar] = { 7.26796e+02, 3.53054e-01,3.34038e-01,2.99939e+00 ,3.14133e+01,6.88658e-01,1.10932e-01,4.62791e+01   ,5.03579e-01,1.42136e-02};
     
     TMinuit *gMinuit2 = new TMinuit(10);
     gMinuit2->SetFCN(fcn);
@@ -596,7 +596,7 @@ void multitrack_cuts()
     
     for (Int_t i=0;i< 1400;i++) 
     {
-        x[i] = 0.32+i*0.003;
+        x[i] = 0.35+i*0.003;
         y[i] = totalfit(x[i],params);
      }
 
@@ -606,28 +606,28 @@ void multitrack_cuts()
     g2->Draw("SAME");
     
     Double_t x1[300], y1[300];
-    for (Int_t i=0;i< 300;i++) 
+    for (Int_t i=0;i< 250;i++) 
     {
         Double_t params1[3] = {params[7],params[8],params[9]};
-        x1[i] = 0.40+i*0.00065;
+        x1[i] = 0.42+i*0.00065;
         y1[i] = gauss(x1[i],params1);
      }
 
-    auto g3 = new TGraph(300,x1,y1);
+    auto g3 = new TGraph(250,x1,y1);
     g3->SetLineWidth(2);
     g3->SetLineColor(kGreen);
     g3->Draw("SAME");
     
     
     Double_t x2[500], y2[500];
-    for (Int_t i=0;i< 500;i++) 
+    for (Int_t i=0;i< 400;i++) 
     {
         x2[i] = 0.4+i*0.0015;
 	Double_t params2[3] = {params[4],params[5],params[6]};
         y2[i] = gauss(x2[i],params2);
      }
 
-    auto g4 = new TGraph(500,x2,y2);
+    auto g4 = new TGraph(400,x2,y2);
     g4->SetLineWidth(2);
     g4->SetLineColor(kGreen);
     g4->Draw("SAME");
@@ -647,9 +647,9 @@ void multitrack_cuts()
     //legend->SetHeader("Fit","C");
     legend6->AddEntry(h6,"Data","lep");
     legend6->AddEntry(g5,"Background: A(x-B)^{C}exp(-Dx)","l");
-    legend6->AddEntry(g3,"#splitline{Kaon peak:}{#mu = 0.504 #pm 0.006 GeV}","l");
-    legend6->AddEntry(g4,"#splitline{Rho peak:}{ #mu = 0.70 #pm 0.01 GeV} ","l");
-    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 60 / 65","l");
+    legend6->AddEntry(g3,"#splitline{Kaon peak:}{#splitline{#mu = 0.505 #pm 0.005 GeV}{#gamma = 0.016 #pm 0.008 GeV}}","l");
+    legend6->AddEntry(g4,"#splitline{Rho peak:}{#splitline{#mu = 0.70 #pm 0.01 GeV}{#sigma = 0.1 #pm 0.01 GeV}} ","l");
+    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 57 / 63","l");
     legend6->SetTextSize(0.028);
     legend6->Draw();
     
