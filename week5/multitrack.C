@@ -272,7 +272,7 @@ void multitrack()
     my_tree->SetBranchAddress("ntrk",&ntrk);
  
     int numEnt = my_tree->GetEntries();
-    Int_t track = 4;
+    Int_t track = 6;
 
     for (int irow = 0; irow< numEnt; irow++)
     {    
@@ -310,17 +310,6 @@ void multitrack()
 		isPi[i] = trk_isPi[i];
 	        isP[i] = trk_isP[i];
 		isK[i] = trk_isK[i];
-	    }
-	    
-	    Double_t netcharge = 0;
-	    for(int c : q)
-	    {
-	       netcharge += c;
-	    }
-	    
-	    if (netcharge != 0)
-	    {
-		continue;
 	    }
 	    
 	    h1->Fill(px[0]+px[1]+px[2]+px[3]+px[4]-6500*(ThxL+ThxR));

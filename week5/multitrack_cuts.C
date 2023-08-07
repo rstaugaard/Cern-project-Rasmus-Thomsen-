@@ -16,7 +16,7 @@ struct VarData {
 TFile *file1 = new TFile("/eos/cms/store/group/phys_smp/CMS_TOTEM/ntuples/data/TOTEM43.root","read");
 TTree *my_tree = (TTree*)file1->Get("tree");
 
-TH1F *h6 = new TH1F("h6","h6", 100,0.2,1.4);
+TH1F *h6 = new TH1F("h6","h6", 85,0.2,1.4);
 TH1F *h7 = new TH1F("h7","two-mass", 100,0.24,1.4);
 
 
@@ -78,7 +78,7 @@ Double_t background(Float_t x,Double_t *par)
 
 Double_t totalfit(Float_t x,Double_t *par)
 {
-   Double_t bp[4] = { 1.23189e+04,2.47533e-01,8.05796e-01,3.77877e+00};
+   //Double_t bp[4] = { 1.23189e+04,2.47533e-01,8.05796e-01,3.77877e+00};
    Double_t pars1[4] = {par[0],par[1],par[2],par[3]};
    Double_t pars2[3] = {par[4],par[5],par[6]};
    Double_t pars3[3] = {par[7],par[8],par[9]};
@@ -90,11 +90,6 @@ Double_t totalfit(Float_t x,Double_t *par)
 Double_t dist(Double_t dxy1, Double_t dz1, Double_t dxy2, Double_t dz2)
 {
     return TMath::Sqrt(TMath::Power(dxy1-dxy2,2)+TMath::Power(dz1-dz2,2));
-}
-
-Double_t angle(Double_t *p1, Double_t *p2)
-{
-    return (((p1[0]*p2[0]+p1[1]*p2[1])/(TMath::Sqrt(p1[0]*p1[0]+p1[1]*p1[1]+p1[2]*p1[2])*TMath::Sqrt(p2[0]*p2[0]+p2[1]*p2[1]+p2[2]*p2[2]))));
 }
 
 
@@ -149,7 +144,7 @@ void fcn(Int_t &npar, double *gin, double &f, double *par, int iflag)
        xval = h6->GetBinCenter(i);
        yval = h6->GetBinContent(i);
        err = h6->GetBinError(i);
-       if (yval > 0 && xval > 0.3)
+       if (yval > 0 && xval > 0.32)
        {
           dx = (totalfit(xval, par) - yval)/err;
           chi2 += (dx*dx);
@@ -166,13 +161,13 @@ Int_t num_entries = 0;
 
 void myminimizer(Double_t *par, Double_t *err)
 {
-    Double_t arglist[numpar] = {5.93307e+02,2.54708e-01,6.02308e-01,3.41909e+00 ,1.97250e+01,0.75,0.025,30,0.5,0.02};
+    Double_t arglist[numpar] = {            6.58772e+02,3.05219e-01,3.33439e-01,2.82351e+00,5.03231e+01,6.99653e-01,1.09209e-01,3.55524e+01,5.03884e-01,1.85025e-02};
     
     TMinuit *gMinuit2 = new TMinuit(10);
     gMinuit2->SetFCN(fcn);
     
     Int_t ierflg = 0 ;
-    gMinuit2->mnexcm("SET ERR", arglist ,1,ierflg);
+    gMinuit2->mnexcm("SET ERR", arglist ,0,ierflg);
     gMinuit2->mnparm(0, "A", arglist[0], 0.0001, 0, 0, ierflg);
     gMinuit2->mnparm(1, "B", arglist[1], 0.0001,0, 0, ierflg);
     gMinuit2->mnparm(2, "C",arglist[2], 0.0001, 0, 0, ierflg);
@@ -401,53 +396,42 @@ void multitrack_cuts()
 		    std::vector<double> cur_dxy = {TMath::Abs(dxy[Rmap_dxy[i1]]),TMath::Abs(dxy[Rmap_dxy[i2]])};
 	            std::vector<double> cur_dz = {TMath::Abs(dz[Rmap_dxy[i1]]),TMath::Abs(dz[Rmap_dxy[i2]])};
 			
-	            std::vector<double> dxyv_cut;
-	            std::vector<double> dzv_cut;
+	            std::vector<double> dxyv;
 	    
 	            for (int i = 0; i < track; i++)
 	            {
-	                if (i != rank_dxy[i1] && i != rank_dxy[i2])
-			{
-		            dxyv_cut.push_back(TMath::Abs(dxy[i]));
-		            dzv_cut.push_back(TMath::Abs(dz[i]));
-			}
+		        dxyv.push_back(TMath::Abs(dxy[i]));
 	            }
 			
-	            Double_t threshold1 = 0.15;
-		    Double_t threshold2 = 0.3;
-			
-			
-		    bool isOut1 = false;
-		    bool isOut2 = false;
-		    if (TMath::Abs(cur_dxy[0]-cur_dxy[1]) < threshold1)
+	            Double_t threshold1 = 0.2;
+		    Double_t threshold2 = 2;
+		    
+		    double sum = std::accumulate(dxyv.begin(), dxyv.end(), 0.0);
+                    double mean = sum / dxyv.size();
+
+                    double sq_sum = std::inner_product(dxyv.begin(), dxyv.end(), dxyv.begin(), 0.0);
+                    double stdev = std::sqrt(sq_sum / dxyv.size() - mean * mean);
+		    
+		    if (stdev > 0.2)
 		    {
-			   
+		        usedIndices.insert(i1);
+			continue;
 		    }
+		    
 			
-		    else
+		    if (TMath::Abs(cur_dxy[0]-cur_dxy[1]) > threshold1)
 		    {
-		        isOut1 = isElementFarFromOthers(cur_dxy,dxys,threshold1);
-		        if (isOut1 == true)
-		        {
-		            usedIndices.insert(i1);
-		        }
-			    
+			 usedIndices.insert(i1);
+			 continue;
 		    }
-			
-			
-		    if (TMath::Abs(cur_dz[0]-cur_dz[1]) < threshold2)
+
+		    if (TMath::Abs(cur_dz[0]-cur_dz[1]) > threshold2)
 		    {
-			
+		         usedIndices.insert(i1);
+			 continue;
 		    }
-			
-		    else
-		    {
-		        isOut2 = isElementFarFromOthers(cur_dz,dzs,threshold2);
-		        if (isOut2 == true)
-		        {
-		            usedIndices.insert(i1);
-		        }
-		    }
+		    
+		    
   
 		    
 		    if (q[Rmap_dxy[i1]] + q[Rmap_dxy[i2]] == 0 &&  !is_fill &&
@@ -461,26 +445,9 @@ void multitrack_cuts()
 			std::cout <<TMath::Abs(dxy[Rmap_dxy[i1]]) <<  " , " << TMath::Abs(dxy[Rmap_dxy[i2]]) << std::endl;
 			std::cout <<TMath::Abs(dz[Rmap_dxy[i1]]) << " , " << TMath::Abs(dz[Rmap_dxy[i2]]) << std::endl;
 			
-			
-		
-			//std::cout << Rmap_dxy[0] << " , " << Rmap_dxy[1] << " , " << Rmap_dxy[2] << " , " << Rmap_dxy[3] << " , " << Rmap_dxy[4] << " , " << Rmap_dxy[5] << std::endl;
-			
-			
-			//std::cout << i1 << " , " << i2 << std::endl;
-		        //std::cout << dxy[Rmap_dxy[i1]] << " , " << dxy[Rmap_dxy[i2]] << std::endl;
-			
-			
 			Double_t pm[3] = {px[Rmap_dxy[i1]],py[Rmap_dxy[i1]],pz[Rmap_dxy[i1]]};
 	                Double_t pm2[3] = {px[Rmap_dxy[i2]],py[Rmap_dxy[i2]],pz[Rmap_dxy[i2]]};
 		        Double_t mass = calc_InvM(pm,pm2);
-			
-			Double_t total_pt = 0;
-		        for (int l = 0; l < track; l++)
-		        {
-		            total_pt += pt[l];
-		        }  
-			
-			d3->Fill(mass,zPV);
 			
 			modifmassList.push_back({i1, i2, mass});		    
 		    }
@@ -512,28 +479,14 @@ void multitrack_cuts()
 		     o_vars.push_back(var1);
 	         }
 	     }
-	    
-	     if (q[0]+q[1]+q[2]+q[3]+q[4]+q[5] != 0)
-	     {
-	         if (o_vars.size() == 2 || o_vars.size() == 3)
-	         {
-	              d2->Fill(o_vars[0],o_vars[1]);
-		  
-		      if (TMath::Abs(o_vars[0]-0.74) < 0.3)
-		      {
-		          h7->Fill(o_vars[1]);
-		      }
+	  
 	     
-	         }
-	     }
-	     
-	     else
 	     {
 	         if (o_vars.size() == 2 || o_vars.size() == 3)
 	         {
 	            d1->Fill(o_vars[0],o_vars[1]);
 		 
-		    if (TMath::Abs(o_vars[0]-0.74) < 0.3)
+		    if (TMath::Abs(o_vars[0]-mrho) < 0.15)
 		    {
 		       h6->Fill(o_vars[1]);
 		    }
@@ -612,12 +565,10 @@ void multitrack_cuts()
     Yhist2->SetLineColor(kRed);
    
     TCanvas *c5 = new TCanvas("c5","c5",800,600);
-    h6->SetTitle("Outliers; Inv. Mass [GeV] ; ");
+    h6->SetTitle(" ; Inv. Mass [GeV] ; ");
     h6->Draw("E1");
-    h7->Draw("SAMEE1");
     
     h6->SetLineColor(kBlue);
-    h7->SetLineColor(kRed);
     
     auto legend2 = new TLegend(0.64,0.4,0.99,0.78);
     legend2->AddEntry(Yhist,"With outliers","lep");
@@ -645,7 +596,7 @@ void multitrack_cuts()
     
     for (Int_t i=0;i< 1400;i++) 
     {
-        x[i] = 0.26+i*0.005;
+        x[i] = 0.32+i*0.003;
         y[i] = totalfit(x[i],params);
      }
 
@@ -683,7 +634,7 @@ void multitrack_cuts()
     
     for (Int_t i=0;i< 300;i++) 
     {
-        Double_t back_params[4] = {5.93307e+02,2.54708e-01,6.02308e-01,3.41909e+00};
+        Double_t back_params[4] = {params[0],params[1],params[2],params[3]};
         y[i] = background(x[i],back_params);
      }
 
@@ -696,11 +647,19 @@ void multitrack_cuts()
     //legend->SetHeader("Fit","C");
     legend6->AddEntry(h6,"Data","lep");
     legend6->AddEntry(g5,"Background: A(x-B)^{C}exp(-Dx)","l");
-    legend6->AddEntry(g3,"#splitline{Kaon peak:}{#mu = 0.50 #pm 0.02 GeV}","l");
-    legend6->AddEntry(g4,"#splitline{Rho peak:}{ #mu = 0.70 #pm 0.05 GeV} ","l");
-    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 377 / 179","l");
+    legend6->AddEntry(g3,"#splitline{Kaon peak:}{#mu = 0.504 #pm 0.006 GeV}","l");
+    legend6->AddEntry(g4,"#splitline{Rho peak:}{ #mu = 0.70 #pm 0.01 GeV} ","l");
+    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 60 / 65","l");
     legend6->SetTextSize(0.028);
     legend6->Draw();
+    
+    TLatex s1;
+    s1.SetTextSize(0.06);
+    s1.DrawLatex(0.82*1.4,145, "#font[22]{CMS}");
+    
+    TLatex s2;
+    s2.SetTextSize(0.034);
+    s2.DrawLatex(0.87*1.4,165, "#sqrt{s} = 13 #font[22]{TeV}");
    
    
    
@@ -710,6 +669,13 @@ void multitrack_cuts()
      h7->SetTitle("; Inv Mass [GeV] ; ");
     
      std::cout << "Number of bins: " << "  "  << numbins << std::endl;
+     
+     std::cout << "mu1:" << params[5] << "+-" << errs[5] << std::endl;
+    std::cout << "sigma1:" << params[6] << "+-" << errs[6] << std::endl;
+    std::cout << "mu2:" << params[8] << "+-" << errs[8] << std::endl;
+    std::cout << "gamma:" << params[9] << "+-" << errs[9] << std::endl;
+    std::cout << "Significans rho" << params[4]/errs[4] << std::endl;
+    std::cout << "Significans kaon" << params[7]/errs[7] << std::endl;
     
     
 }

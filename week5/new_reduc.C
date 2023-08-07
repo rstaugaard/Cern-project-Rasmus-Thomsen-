@@ -17,7 +17,7 @@ TTree *my_tree = (TTree*)file1->Get("tree");
 
 TH1F *h6 = new TH1F("h6","h6", 70,0.2,1.6);
 TH1F *h7 = new TH1F("h7","four-mass", 40,0.8,3);
-TH1F *h8 = new TH1F("h8","h8", 200,-4,4);
+TH1F *h8 = new TH1F("h8","h8", 200,0.2,1.6);
 TH1F *h9 = new TH1F("h9","h9", 200,-4,4);
 TH2F *d1 = new TH2F("d1","d1",200,0.2,2,200,0.2,2);
 TH2F *d2 = new TH2F("d2","d2",100,0.2,2,100,0,2);
@@ -134,6 +134,29 @@ void myminimizer(Double_t *par, Double_t *err)
     }
 }
 
+bool isThreeEntriesCloser(const std::vector<float>& input) {
+    if (input.size() != 4) {
+        std::cerr << "Input vector must have exactly four entries.\n";
+        return false;
+    }
+
+    // Calculate pairwise distances
+    std::vector<double> distances;
+    for (size_t i = 0; i < input.size(); ++i) {
+        for (size_t j = i + 1; j < input.size(); ++j) {
+            double distance = std::abs(input[i] - input[j]);
+            distances.push_back(distance);
+        }
+    }
+
+    // Sort distances in ascending order
+    std::sort(distances.begin(), distances.end());
+
+    // Check if three smallest distances are closer together than the largest distance
+    double sumOfSmallestDistances = distances[0] + distances[1] + distances[2];
+    return sumOfSmallestDistances < distances[3];
+}
+
 
 std::vector<float> reduction(const std::vector<float>& data, const std::vector<int>& q) {
     int n = data.size();
@@ -163,6 +186,12 @@ std::vector<float> reduction(const std::vector<float>& data, const std::vector<i
 	{
 	    continue;
 	}
+	
+	if (isThreeEntriesCloser(combination) == true)
+	{
+	    continue;
+	}
+	
 
         // Calculate standard deviation
         double mean = static_cast<double>(std::accumulate(combination.begin(), combination.end(), 0.0)) / 4.0;
@@ -303,7 +332,7 @@ std::vector<float> pair_up(Particle p1, Particle p2, Particle p3, Particle p4)
 
 //                     ----------------------------------------------------
 
-void fourtrack_reduc()
+void new_reduc()
 {
     TH1F *h1 = new TH1F("h1","h1", 200,-2,2);
     TH1F *h2 = new TH1F("h2","h2", 200,-2,2);
@@ -337,7 +366,7 @@ void fourtrack_reduc()
     my_tree->SetBranchAddress("ntrk",&ntrk);
  
     int numEnt = my_tree->GetEntries();
-    Int_t track = 6;
+    Int_t track = 4;
 
     for (int irow = 0; irow< numEnt; irow++)
     {    
@@ -399,15 +428,12 @@ void fourtrack_reduc()
 	        continue;
 	    }
 	    
-	    if (areElementsClose(pairs, 0.125) == false)
+	    if (areElementsClose(pairs, 0.2) == false)
 	    {
 	        continue;
 	    } 
 	    
-	    if (pt[0]+pt[1]+pt[2]+pt[3]+pt[4]+pt[5] < 1.5)
-	    {
-	        continue;
-	    } 
+
 	    
 	    
 	    std::cout<< dxy[0] << " , " << dxy[1] << " , " << dxy[2] << " , " << dxy[3] << " , " << dxy[4] << " , " << dxy[5] << std::endl;
@@ -419,7 +445,7 @@ void fourtrack_reduc()
 	    std::vector<int> indxs = findIndices(dxys,pairs);
 	    std::cout<< indxs[0] << " , " << indxs[1] << " , " << indxs[2] << " , " << indxs[3] << std::endl;
 	    
-	    h8->Fill(dz[indxs[0]]+dz[indxs[1]]+dz[indxs[2]]+dz[indxs[3]]);
+	    //h8->Fill(dz[indxs[0]]+dz[indxs[1]]+dz[indxs[2]]+dz[indxs[3]]);
 	    h9->Fill(dds[indxs[0]]+dds[indxs[1]]+dds[indxs[2]]+dds[indxs[3]]);
 	    
 	    std::vector<float> p1 = {px[indxs[0]],py[indxs[0]],pz[indxs[0]]};
@@ -434,12 +460,13 @@ void fourtrack_reduc()
 	    
 	    std::vector<float> mass = pair_up(particle1,particle2,particle3,particle4);
 
-	    //h7->Fill(mass[0]);
-	    //h7->Fill(mass[1]);
-	    if (TMath::Abs(mass[0]-mrho) < 0.08)
+	    h8->Fill(mass[0]);
+	    h8->Fill(mass[1]);
+	    
+	    if (TMath::Abs(mass[0]-mrho) < 0.15)
 	    {
 	        h6->Fill(mass[1]);
-		if (TMath::Abs(mass[1]-mrho) < 0.08)
+		if (TMath::Abs(mass[1]-mrho) < 0.15)
 		{
 		    h7->Fill(calc_fourmass(p1,p2,p3,p4));
 		    
@@ -550,10 +577,12 @@ void fourtrack_reduc()
     std::cout << "Significans: " << "  "  << params[2]/errs[2]  << std::endl;
     
     TCanvas *c8 = new TCanvas("c8","c8",800,600);
-    h8->Draw("E1");
-    h9->Draw("SAMEE1");
+    h7->Draw("E1");
     
-    h9->SetLineColor(kRed);
+    //h9->SetLineColor(kRed);
+    
+    TCanvas *c9 = new TCanvas("c9","c9",800,600);
+    h8->Draw("E1");
     
     
     
