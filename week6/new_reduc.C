@@ -15,9 +15,9 @@
 TFile *file1 = new TFile("/eos/cms/store/group/phys_smp/CMS_TOTEM/ntuples/data/TOTEM43.root","read");
 TTree *my_tree = (TTree*)file1->Get("tree");
 
-TH1F *h6 = new TH1F("h6","h6", 70,0.2,1.6);
+TH1F *h6 = new TH1F("h6","h6", 70,0.2,1.4);
 TH1F *h7 = new TH1F("h7","four-mass", 40,0.8,3);
-TH1F *h8 = new TH1F("h8","h8", 200,0.2,1.6);
+TH1F *h8 = new TH1F("h8","h8", 200,0.2,1.4);
 TH1F *h9 = new TH1F("h9","h9", 200,-4,4);
 TH2F *d1 = new TH2F("d1","d1",200,0.2,2,200,0.2,2);
 TH2F *d2 = new TH2F("d2","d2",100,0.2,2,100,0,2);
@@ -492,7 +492,7 @@ void new_reduc()
     c1->Divide(3,1);
 
     gStyle->SetPalette(kCividis);
-    gStyle->SetOptStat(true);
+    gStyle->SetOptStat(false);
     c1->cd(1); h1->Draw();
     c1->cd(2); h2->Draw();
     c1->cd(3); h3->Draw();
@@ -565,10 +565,20 @@ void new_reduc()
     legend6->AddEntry(h6,"Data","lep");
     legend6->AddEntry(g5,"Background: Nexp(-tx)","l");
     //legend6->AddEntry(g3,"#splitline{Kaon peak:}{#mu = 0.50 #pm 0.02 GeV}","l");
-    legend6->AddEntry(g4,"#splitline{Rho peak:}{ #mu = 0.70 #pm 0.05 GeV} ","l");
-    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 377 / 179","l");
+    legend6->AddEntry(g4,"#splitline{Rho peak:}{#splitline{ #mu = 0.753 #pm 0.009 GeV}{#sigma = 0.05 #pm 0.01 GeV}} ","l");
+    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 56 / 41","l");
     legend6->SetTextSize(0.028);
     legend6->Draw();
+    
+    h6->SetTitle(" ; Inv. Mass [GeV]; ");
+    
+    TLatex s1;
+    s1.SetTextSize(0.06);
+    s1.DrawLatex(0.82*1.4,208, "#font[22]{CMS}");
+    
+    TLatex s2;
+    s2.SetTextSize(0.034);
+    s2.DrawLatex(0.87*1.4,232, "#sqrt{s} = 13 #font[22]{TeV}");
    
     TCanvas *c7 = new TCanvas("c7","c7",1600,600);
     c7->Divide(2,1);
@@ -583,10 +593,21 @@ void new_reduc()
     TCanvas *c8 = new TCanvas("c8","c8",800,600);
     h7->Draw("E1");
     
+    TLatex s3;
+    s3.SetTextSize(0.06);
+    s3.DrawLatex(0.82*3,200, "#font[22]{CMS}");
+    
+    TLatex s4;
+    s4.SetTextSize(0.034);
+    s4.DrawLatex(0.87*3,230, "#sqrt{s} = 13 #font[22]{TeV}");
+    
+    h7->SetTitle(" ; Inv. 4-Mass [GeV] ; ");
+    
     //h9->SetLineColor(kRed);
     
     TCanvas *c9 = new TCanvas("c9","c9",800,600);
     h8->Draw("E1");
+    
     
     
     
