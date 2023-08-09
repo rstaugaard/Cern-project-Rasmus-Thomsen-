@@ -15,10 +15,7 @@
 TFile *file1 = new TFile("/eos/cms/store/group/phys_smp/CMS_TOTEM/ntuples/data/TOTEM43.root","read");
 TTree *my_tree = (TTree*)file1->Get("tree");
 
-TH1F *hallmass = new TH1F("hallmass","hallmass", 100,0.2,1.6);
-TH1F *bothmass = new TH1F("bothmass","bothmass", 140,0.2,1.4);
-
-TH1F *h6 = new TH1F("h6","h6", 100,0.2,1.4);
+TH1F *h6 = new TH1F("h6","h6", 70,0.2,1.4);
 TH1F *h7 = new TH1F("h7","four-mass", 40,0.8,3);
 
 TH1F *h6_2 = new TH1F("h6_2","h6_2", 55,0.2,1.4);
@@ -296,42 +293,38 @@ std::vector<int> findIndices(const std::vector<float>& dxy, const std::vector<fl
 bool isSplitThreeTrack(std::vector<float> picked_dxys,std::vector<float> remaining_dxys)
 {
     int count = 0;
+    std::vector<float> distance1;
+    std::vector<float> distance2;
     for(int i = 0; i < picked_dxys.size(); i++)
     {
-        float Largest_distance = 0;
-        float distance1;
 	for (int j = 0; j < picked_dxys.size(); j++)
 	{
-	    distance1 = TMath::Abs(picked_dxys[i]-picked_dxys[j]);
-	    if (distance1 > Largest_distance)
-	    {
-	        Largest_distance = distance1;
-	    }
+	    distance1.push_back(TMath::Abs(picked_dxys[i]-picked_dxys[j]));
 	}
 	
-	float Smallest_distance = 100;
-	float distance2;
-	for (int k = 0; k < remaining_dxys.size(); k++)
-	{
-	    distance2 = TMath::Abs(picked_dxys[i]-remaining_dxys[k]);
-	    if (distance2 < Smallest_distance)
-	    {
-	        Smallest_distance = distance2;
-	    }
+        distance2.push_back(TMath::Abs(picked_dxys[i]-remaining_dxys[0]));
+
 	
-	}
-	
-	if (Largest_distance > Smallest_distance)
-	{
-	   count += 1;
-	   if (count == 2)
-	   {
-	       return true;
-	   }
-	}
+
     }
     
-    return false;
+    std::sort(distance2.begin(), distance2.end());
+    
+    float sum = 0;
+    for (int i = 0; i< distance1.size(); i++)
+    {
+        sum += distance1[i];
+    } 
+    
+    if (2*sum/distance1.size() > distance1[0]+distance2[0])
+    {
+        return true;
+    }
+    
+    else
+    {
+        return false;
+    }
 }
 
 
@@ -424,16 +417,6 @@ std::vector<float> pair_up(Particle p1, Particle p2, Particle p3, Particle p4)
   
   d5->Fill((DeltaDxy1+DeltaDxy2)/2,(DeltaDxy3+DeltaDxy4)/2);
   
-  if (TMath::Abs(mass1-mrho) < 0.15)
-  {
-       bothmass->Fill(mass2);	
-  }
-
-  if (TMath::Abs(mass3-mrho) < 0.15)
-  {
-       bothmass->Fill(mass4);
-  }
-  
   return masses; 
 }
 
@@ -444,7 +427,7 @@ std::vector<float> pair_up(Particle p1, Particle p2, Particle p3, Particle p4)
 
 //                     ----------------------------------------------------
 
-void new_reduc()
+void fourtwo_reduc()
 {
     TH1F *h1 = new TH1F("h1","h1", 200,-2,2);
     TH1F *h2 = new TH1F("h2","h2", 200,-2,2);
@@ -481,7 +464,7 @@ void new_reduc()
     my_tree->SetBranchAddress("ntrk",&ntrk);
  
     int numEnt = my_tree->GetEntries();
-    Int_t track = 6;
+    Int_t track = 5;
     
     // Load in a given n-track
 
@@ -557,6 +540,30 @@ void new_reduc()
             // Find indices to store data in particle-struct
 	    
 	    std::vector<int> indxs = findIndices(dxys,pairs);
+	    
+	    
+	    //std::vector<float> curr_dxy = {dxy[indxs[0]],dxy[indxs[1]],dxy[indxs[2]],dxy[indxs[3]]};
+	    //std::vector<float> rem_dxy;
+	    
+	    //for (int i = 0; i< track; i++)
+	    //{
+	    //    if(i != indxs[0] && i != indxs[1] && i != indxs[2] && i != indxs[3])
+	    //  {
+	    //      rem_dxy.push_back(dxy[i]);
+	    //  }
+	    //} 
+	    
+	    //if (isSplitThreeTrack(curr_dxy,rem_dxy) == true)
+	    //{
+	    //    continue;
+	    //}
+	    
+	    if ((dxy[indxs[0]]+dxy[indxs[1]]+dxy[indxs[2]]+dxy[indxs[3]])/4 > 0.2)
+	    {
+	        continue;
+	    }
+	    
+	    
 	    
 	    // Check momentum conservation in four-track
 	    h11->Fill(px[indxs[0]]+px[indxs[1]]+px[indxs[2]]+px[indxs[3]]-6500*(ThxL+ThxR));
@@ -743,29 +750,31 @@ void new_reduc()
     h8->Draw("E1");
     
     TCanvas *c10 = new TCanvas("c10","c10",1600,600);
-    c10->Divide(2,1);
-    c10->cd(1); d4->Draw("Colz");
-    
-    TLatex s25;
-    s25.SetTextSize(0.06);
-    s25.DrawLatex(0.3,3.02, "#font[22]{CMS}");
-    
-    TLatex s26;
-    s26.SetTextSize(0.034);
-    s26.DrawLatex(0.84*3,3.02, "#sqrt{s} = 13 #font[22]{TeV}");
-    
-    c10->cd(2); d5->Draw("Colz");
-    
     d4->SetTitle(" ; Inv. Mass ; #Delta|dz|");
     d5->SetTitle(" ;#Delta|dz_{1}| ;#Delta|dz_{2}|");
     
-    TLatex s5;
-    s5.SetTextSize(0.06);
-    s5.DrawLatex(0.3,3.02, "#font[22]{CMS}");
+    c10->Divide(2,1);
+    c10->cd(1); d4->Draw("Colz");
     
-    TLatex s6;
-    s6.SetTextSize(0.034);
-    s6.DrawLatex(0.84*3,3.02, "#sqrt{s} = 13 #font[22]{TeV}");
+    TLatex s15;
+    s15.SetTextSize(0.06);
+    s15.DrawLatex(0.3,3.02, "#font[22]{CMS}");
+    
+    TLatex s16;
+    s16.SetTextSize(0.034);
+    s16.DrawLatex(0.84*2,3.02, "#sqrt{s} = 13 #font[22]{TeV}");
+    
+    c10->cd(2); d5->Draw("Colz");
+   
+    
+    TLatex s35;
+    s35.SetTextSize(0.06);
+    s35.DrawLatex(0.3,3.02, "#font[22]{CMS}");
+    
+    TLatex s36;
+    s36.SetTextSize(0.034);
+    s36.DrawLatex(0.84*3,3.02, "#sqrt{s} = 13 #font[22]{TeV}");
+    
     
     
     TCanvas *c11 = new TCanvas("c11", "c11", 1600,600);
@@ -782,14 +791,6 @@ void new_reduc()
     h6_2->SetTitle(" Two-mass; Inv. Mass; ");
     h7_2->SetTitle("Four-mass; Inv. 4-mass; ");
         
-	
-	
-    TCanvas *allmass = new TCanvas("allmass","allmass",800,600);
-    bothmass->Draw("E1");
-    h6->Draw("SAMEE1");
-    
-    bothmass->SetLineColor(kRed);
-    
     
     
 }
