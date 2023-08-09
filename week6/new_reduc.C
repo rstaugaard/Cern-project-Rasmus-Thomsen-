@@ -17,14 +17,16 @@ TTree *my_tree = (TTree*)file1->Get("tree");
 
 TH1F *hallmass = new TH1F("hallmass","hallmass", 100,0.2,1.6);
 TH1F *bothmass = new TH1F("bothmass","bothmass", 140,0.2,1.4);
+TH1F *offdiagmass = new TH1F("offdiagmass","offdiagmass", 90,0.2,1.4);
+TH1F *diagmass = new TH1F("diagmass","diagmass", 90,0.2,1.4);
 
-TH1F *h6 = new TH1F("h6","h6", 100,0.2,1.4);
+TH1F *h6 = new TH1F("h6","h6", 90,0.2,1.4);
 TH1F *h7 = new TH1F("h7","four-mass", 40,0.8,3);
 
 TH1F *h6_2 = new TH1F("h6_2","h6_2", 55,0.2,1.4);
 TH1F *h7_2 = new TH1F("h7_2","four-mass", 30,0.8,3);
 
-TH1F *h8 = new TH1F("h8","h8", 200,0.2,1.4);
+TH1F *h8 = new TH1F("h8","h8", 140,0.2,1.4);
 TH1F *h9 = new TH1F("h9","h9", 200,-4,4);
 TH2F *d1 = new TH2F("d1","d1",200,0.2,2,200,0.2,2);
 TH2F *d2 = new TH2F("d2","d2",100,0.2,2,100,0,2);
@@ -406,6 +408,18 @@ std::vector<float> pair_up(Particle p1, Particle p2, Particle p3, Particle p4)
         d2->Fill(mass2,DeltaDxy2);
         d3->Fill(mass3,DeltaDxy3);
         d3->Fill(mass4,DeltaDxy4);
+	      
+	if (TMath::Abs(mass3-mrho) < 0.15)
+        {
+            diagmass->Fill(mass4);
+	    h8->Fill(mass4);
+        }
+	
+	if (TMath::Abs(mass1-mrho) < 0.15)
+        {
+            offdiagmass->Fill(mass2);
+	    h8->Fill(mass2);
+        }
     }
     else
     {
@@ -415,6 +429,18 @@ std::vector<float> pair_up(Particle p1, Particle p2, Particle p3, Particle p4)
         d2->Fill(mass4,DeltaDxy4);
 	d3->Fill(mass1,DeltaDxy1);
         d3->Fill(mass2,DeltaDxy2);
+	
+	if (TMath::Abs(mass1-mrho) < 0.15)
+        {
+            diagmass->Fill(mass2);
+	    h8->Fill(mass2);
+        }
+	
+	if (TMath::Abs(mass3-mrho) < 0.15)
+        {
+            offdiagmass->Fill(mass4);
+	    h8->Fill(mass4);
+        }
     }
   
   d4->Fill(mass1,DeltaDxy1);
@@ -423,16 +449,6 @@ std::vector<float> pair_up(Particle p1, Particle p2, Particle p3, Particle p4)
   d4->Fill(mass4,DeltaDxy4);
   
   d5->Fill((DeltaDxy1+DeltaDxy2)/2,(DeltaDxy3+DeltaDxy4)/2);
-  
-  if (TMath::Abs(mass1-mrho) < 0.15)
-  {
-       bothmass->Fill(mass2);	
-  }
-
-  if (TMath::Abs(mass3-mrho) < 0.15)
-  {
-       bothmass->Fill(mass4);
-  }
   
   return masses; 
 }
@@ -578,9 +594,6 @@ void new_reduc()
 	    
 	    // Finally pair up the 4-track into two 2-tracks
 	    std::vector<float> mass = pair_up(particle1,particle2,particle3,particle4);
-
-	    h8->Fill(mass[0]);
-	    h8->Fill(mass[1]);
 	    
 	    // Cut on the 2-mass, so we only consider interesting pairs
 	    if (TMath::Abs(mass[0]-mrho) < 0.15)
@@ -677,8 +690,8 @@ void new_reduc()
     legend6->AddEntry(h6,"Data","lep");
     legend6->AddEntry(g5,"Background: Nexp(-tx)","l");
     //legend6->AddEntry(g3,"#splitline{Kaon peak:}{#mu = 0.50 #pm 0.02 GeV}","l");
-    legend6->AddEntry(g4,"#splitline{Rho peak:}{#splitline{ #mu = 0.753 #pm 0.009 GeV}{#sigma = 0.05 #pm 0.01 GeV}} ","l");
-    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 56 / 41","l");
+    legend6->AddEntry(g4,"#splitline{Rho peak:}{#splitline{ #mu = 0.755 #pm 0.009 GeV}{#sigma = 0.05 #pm 0.01 GeV}} ","l");
+    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 73 / 55","l");
     legend6->SetTextSize(0.028);
     legend6->Draw();
     
@@ -686,11 +699,11 @@ void new_reduc()
     
     TLatex s1;
     s1.SetTextSize(0.06);
-    s1.DrawLatex(0.82*1.4,268, "#font[22]{CMS}");
+    s1.DrawLatex(0.82*1.4,218, "#font[22]{CMS}");
     
     TLatex s2;
     s2.SetTextSize(0.034);
-    s2.DrawLatex(0.87*1.4,301, "#sqrt{s} = 13 #font[22]{TeV}");
+    s2.DrawLatex(0.87*1.4,241, "#sqrt{s} = 13 #font[22]{TeV}");
    
     TCanvas *c7 = new TCanvas("c7","c7",1600,600);
     c7->Divide(2,1);
@@ -742,6 +755,17 @@ void new_reduc()
     TCanvas *c9 = new TCanvas("c9","c9",800,600);
     h8->Draw("E1");
     
+    TLatex s88;
+    s88.SetTextSize(0.06);
+    s88.DrawLatex(0.82*3,222, "#font[22]{CMS}");
+    
+    TLatex s89;
+    s89.SetTextSize(0.034);
+    s89.DrawLatex(0.87*3,260, "#sqrt{s} = 13 #font[22]{TeV}");
+    
+    
+    h8->SetTitle(" ; Inv. Mass [GeV];");
+    
     TCanvas *c10 = new TCanvas("c10","c10",1600,600);
     c10->Divide(2,1);
     c10->cd(1); d4->Draw("Colz");
@@ -790,6 +814,45 @@ void new_reduc()
     
     bothmass->SetLineColor(kRed);
     
+    TCanvas *diag = new TCanvas("diag","diag",1600,600);
+    diag->Divide(2,1);
+    diagmass->Scale(1./diagmass->Integral(), "width");
+    diag->cd(1); diagmass->Draw();
+    diagmass->SetLineColor(kBlue);
+    diagmass->SetMarkerStyle(25);
+    diagmass->SetMarkerColorAlpha(kBlue,0.5);
+    diagmass->SetTitle("Selected ; Inv. Mass [GeV] ; ");
+    
+    TLatex t1;
+    t1.SetTextSize(0.06);
+    t1.DrawLatex(0.76*1.4,1.95, "#font[22]{CMS}");
+    
+    TLatex t2;
+    t2.SetTextSize(0.034);
+    t2.DrawLatex(0.86*1.4,2.32, "#sqrt{s} = 13 #font[22]{TeV}");
+    
+    
+    diagmass->Sumw2();
+    offdiagmass->Scale(1./offdiagmass->Integral(), "width");
+    diag->cd(2); offdiagmass->Draw("SAME");
+    offdiagmass->SetMarkerStyle(24);
+    offdiagmass->SetMarkerColorAlpha(kRed,0.5);
+    offdiagmass->Sumw2();
+    offdiagmass->SetTitle("Not selected ; Inv. Mass [GeV]; ");
+    
+    offdiagmass->SetLineColor(kRed);
+    
+    TLatex t11;
+    t11.SetTextSize(0.06);
+    t11.DrawLatex(0.76*1.4,1.76, "#font[22]{CMS}");
+    
+    TLatex t22;
+    t22.SetTextSize(0.034);
+    t22.DrawLatex(0.86*1.4,2.1, "#sqrt{s} = 13 #font[22]{TeV}");
+    
+    
+    
+    //offdiagmass->Draw("E1");
     
     
 }
