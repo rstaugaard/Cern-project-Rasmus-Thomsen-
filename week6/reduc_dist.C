@@ -21,10 +21,10 @@ TH1F *offdiagmass = new TH1F("offdiagmass","offdiagmass", 90,0.2,1.4);
 TH1F *diagmass = new TH1F("diagmass","diagmass", 90,0.2,1.4);
 
 TH1F *h6 = new TH1F("h6","h6", 90,0.2,1.4);
-TH1F *h7 = new TH1F("h7","four-mass", 40,1.2,3.5);
+TH1F *h7 = new TH1F("h7","four-mass", 45,1.2,3.5);
 
 TH1F *h6_2 = new TH1F("h6_2","h6_2", 55,0.2,1.4);
-TH1F *h7_2 = new TH1F("h7_2","four-mass", 30,1.2,3.5);
+TH1F *h7_2 = new TH1F("h7_2","four-mass", 25,1.2,3);
 
 TH1F *h8 = new TH1F("h8","h8", 140,0.2,1.4);
 TH1F *h9 = new TH1F("h9","h9", 200,-4,4);
@@ -206,7 +206,7 @@ std::vector<float> reduction(const std::vector<float>& data, const std::vector<i
     }
 
     std::vector<float> result;
-    double minStdDev = std::numeric_limits<double>::max();
+    double minTotalDist = std::numeric_limits<double>::max();
 
     // Generate all combinations of four elements from the vector
     std::vector<int> indices(n);
@@ -233,19 +233,21 @@ std::vector<float> reduction(const std::vector<float>& data, const std::vector<i
 	}
 	
 
-        // Calculate standard deviation
-        double mean = static_cast<double>(std::accumulate(combination.begin(), combination.end(), 0.0)) / 4.0;
-        double sumSquaredDiff = std::accumulate(combination.begin(), combination.end(), 0.0, [mean](double sum, float num) 
+        float totalDist = 0;
+	for (int j1 = 0; j1< 4; j1++)
 	{
-            return sum + std::pow(num - mean, 2);
-        });
-        
-	double stdDev = std::sqrt(sumSquaredDiff / 4.0);
+	    for (int j2 = j1+1; j2 < 4; j2++)
+	    {
+	        totalDist += TMath::Abs(combination[j1]-combination[j2]);
+	    }
+	}
+	
+	
 
         // Update result if standard deviation is smaller
-        if (stdDev < minStdDev) 
+        if (totalDist < minTotalDist) 
 	{
-            minStdDev = stdDev;
+            minTotalDist = totalDist;
             result = combination;
         }
     } 
@@ -443,14 +445,14 @@ std::vector<float> pair_up(Particle p1, Particle p2, Particle p3, Particle p4)
         }
     }
   
-    d4->Fill(mass1,DeltaDxy1);
-    d4->Fill(mass2,DeltaDxy2);
-    d4->Fill(mass3,DeltaDxy3);
-    d4->Fill(mass4,DeltaDxy4);
+  d4->Fill(mass1,DeltaDxy1);
+  d4->Fill(mass2,DeltaDxy2);
+  d4->Fill(mass3,DeltaDxy3);
+  d4->Fill(mass4,DeltaDxy4);
   
-    d5->Fill((DeltaDxy1+DeltaDxy2)/2,(DeltaDxy3+DeltaDxy4)/2);
+  d5->Fill((DeltaDxy1+DeltaDxy2)/2,(DeltaDxy3+DeltaDxy4)/2);
   
-    return masses; 
+  return masses; 
 }
 
 
@@ -460,7 +462,7 @@ std::vector<float> pair_up(Particle p1, Particle p2, Particle p3, Particle p4)
 
 //                     ----------------------------------------------------
 
-void new_reduc()
+void reduc_dist()
 {
     TH1F *h1 = new TH1F("h1","h1", 200,-2,2);
     TH1F *h2 = new TH1F("h2","h2", 200,-2,2);
@@ -497,7 +499,7 @@ void new_reduc()
     my_tree->SetBranchAddress("ntrk",&ntrk);
  
     int numEnt = my_tree->GetEntries();
-    Int_t track = 6;
+    Int_t track = 5;
     
     // Load in a given n-track
 
@@ -608,7 +610,7 @@ void new_reduc()
 		
 	    }
 	    
-	    if (TMath::Abs(px[indxs[0]]+px[indxs[1]]+px[indxs[2]]+px[indxs[3]]-6500*(ThxL+ThxR))< 0.25 && TMath::Abs(py[indxs[0]]+py[indxs[1]]+py[indxs[2]]+py[indxs[3]]+6500*(ThyL+ThyR)) < 0.25)
+	    if (TMath::Abs(px[indxs[0]]+px[indxs[1]]+px[indxs[2]]+px[indxs[3]]-6500*(ThxL+ThxR))< 0.1 && TMath::Abs(py[indxs[0]]+py[indxs[1]]+py[indxs[2]]+py[indxs[3]]+6500*(ThyL+ThyR)) < 0.1)
 	    {
 	        if (TMath::Abs(mass[0]-mrho) < 0.15)
 	        {

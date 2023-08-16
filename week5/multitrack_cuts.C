@@ -242,6 +242,8 @@ void multitrack_cuts()
     TH1F *h2 = new TH1F("h2","py",200,-2,2);
     TH1F *h3 = new TH1F("h3","pz",200,-5,5);
     
+    TH1F *Allcombs new TH1F("Allcombs","Allcombs",200,0.2,2);
+    
     TH2F *his4 = new TH2F("his4","Delta dxy",100,0,4,100,0.2,1.6);   
     TH2F *his5 = new TH2F("his5","Delta dz",100,0,4,100,0.2,1.6);
     TH2F *his6 = new TH2F("his6","Dist dxyz",100,0,4,100,0.2,1.6);
@@ -258,6 +260,8 @@ void multitrack_cuts()
     TH2F *d7 = new TH2F("d7","Angle / two-mass" , 100,0,3,100,-1,1);
     TH2F *d8 = new TH2F("d8","Dist (dxy+dz) / two-mass" , 100,0,4,100,0,3);
     TH2F *d9 = new TH2F("d9","E1 / E2" , 100,-1,1,100,0,3);
+    
+    
     
     
     static Float_t trk_pt[420], trk_eta[420], trk_phi[420], trk_dedx[420], trk_p[420], trk_dxy[420], trk_dz[420];
@@ -391,7 +395,8 @@ void multitrack_cuts()
 	                Double_t ps2[3] = {px[i2],py[i2],pz[i2]};
 			Double_t all_mass = calc_InvM(ps,ps2);
 			h8->Fill(all_mass);
-		    }
+		    }	    
+
 		    
 		    std::vector<double> cur_dxy = {TMath::Abs(dxy[Rmap_dxy[i1]]),TMath::Abs(dxy[Rmap_dxy[i2]])};
 	            std::vector<double> cur_dz = {TMath::Abs(dz[Rmap_dxy[i1]]),TMath::Abs(dz[Rmap_dxy[i2]])};
@@ -412,23 +417,23 @@ void multitrack_cuts()
                     double sq_sum = std::inner_product(dxyv.begin(), dxyv.end(), dxyv.begin(), 0.0);
                     double stdev = std::sqrt(sq_sum / dxyv.size() - mean * mean);
 		    
-		    if (stdev > 0.2)
+		    //if (stdev > 0.2)
 		    {
 		        usedIndices.insert(i1);
-			continue;
+			//continue;
 		    }
 		    
 			
-		    if (TMath::Abs(cur_dxy[0]-cur_dxy[1]) > threshold1)
+		   // if (TMath::Abs(cur_dxy[0]-cur_dxy[1]) > threshold1)
 		    {
 			 usedIndices.insert(i1);
-			 continue;
+			// continue;
 		    }
 
-		    if (TMath::Abs(cur_dz[0]-cur_dz[1]) > threshold2)
+		    //if (TMath::Abs(cur_dz[0]-cur_dz[1]) > threshold2)
 		    {
 		         usedIndices.insert(i1);
-			 continue;
+			// continue;
 		    }
 		    
 		    
@@ -649,7 +654,7 @@ void multitrack_cuts()
     legend6->AddEntry(g5,"Background: A(x-B)^{C}exp(-Dx)","l");
     legend6->AddEntry(g3,"#splitline{Kaon peak:}{#splitline{#mu = 0.505 #pm 0.005 GeV}{#gamma = 0.016 #pm 0.008 GeV}}","l");
     legend6->AddEntry(g4,"#splitline{Rho peak:}{#splitline{#mu = 0.70 #pm 0.01 GeV}{#sigma = 0.1 #pm 0.01 GeV}} ","l");
-    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 57 / 63","l");
+    legend6->AddEntry(g2,"Total fit: Chi2 / NDof : 57 / 62","l");
     legend6->SetTextSize(0.028);
     legend6->Draw();
     
