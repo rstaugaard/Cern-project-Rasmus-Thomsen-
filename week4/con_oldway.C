@@ -136,6 +136,7 @@ void con_oldway()
     TH1F *h2 = new TH1F("h2","py",200,-2,2);
     TH1F *h3 = new TH1F("h3","pz",200,-4,4);
     
+    TH2F *d4 = new TH2F("d4","invM / pT" , 100,0.2,1.6,100,0.2,3);
     TH2F *d5 = new TH2F("d5","dxy / dxy" , 100,-2,2,100,-2,2);
     TH2F *d6 = new TH2F("d6","tdxy / dxy" , 100,-2,2,100,-2,2);
     
@@ -260,7 +261,11 @@ void con_oldway()
 		   
 		   
 		   
-		   
+		        d4->Fill(invM1,pt[0]+pt[1]+pt[2]+pt[3]);
+			d4->Fill(invM2,pt[0]+pt[1]+pt[2]+pt[3]);
+			d4->Fill(invM3,pt[0]+pt[1]+pt[2]+pt[3]);
+			d4->Fill(invM4,pt[0]+pt[1]+pt[2]+pt[3]);
+			
 	                d1->Fill(invM1,invM2);
 		        if (TMath::Abs(invM1-mrho) < 1.25 && pt[0] < 1.2 && pt[1] < 1.2 && pt[2] < 1.2 && pt[3] < 1.2)
 		        {
@@ -422,6 +427,18 @@ void con_oldway()
     TCanvas *c3 = new TCanvas("c3","c3",800,600);
     
     h5->Draw();
+    
+    TCanvas *c4 = new TCanvas("c4","c4",800,600);
+    c4->DrawFrame(0.2,1.6,0.2,3);
+    TLatex Tl2;
+    Tl2.SetTextAlign(12);
+    Tl2.SetTextSize(0.075);
+    Tl2.DrawLatex(1,1,"#font[22]{CMS}");
+    
+    d4->Draw("Colz");
+    d4->SetTitle("Inv. Mass / Total pT; Inv. Mass [GeV] ; Total pT [GeV]");
+    
+   
     
 
     

@@ -4,7 +4,7 @@ TFile *file1 = new TFile("/eos/cms/store/group/phys_smp/CMS_TOTEM/ntuples/data/T
 TTree *my_tree = (TTree*)file1->Get("tree");
 
 TH1F *h4 = new TH1F("h4","h4", 200,0.2,1.4);
-TH1F *h5 = new TH1F("h5","h5", 200,0.4,3);
+TH1F *h5 = new TH1F("h5","h5", 200,0.9,3.5);
 TH1F *h6 = new TH1F("h6","h6", 200,0.2,1.4);
 
      //  Handy functions     ----------------------------------------------------
@@ -428,7 +428,7 @@ void oldway()
 			     
 			     
 			     num_entries += 1;
-			     if (TMath::Abs(invM2-0.745) < 3*0.073)
+			     if (TMath::Abs(invM2-mrho) < 0.15)
 			     {
 			         h5->Fill(calc_fourmass(p1,p2,p3,p4));
 			     }
@@ -440,7 +440,7 @@ void oldway()
 		        {
 		             h6->Fill(invM4);
 			     num_entries += 1;
-			     if (TMath::Abs(invM4-mrho) < 0.4)
+			     if (TMath::Abs(invM4-mrho) < 0.15)
 			     {
 			         Double_t p1[3] = {px[0],py[0],pz[0]};
 				 Double_t p2[3] = {px[1],py[1],pz[1]};
@@ -643,7 +643,17 @@ void oldway()
     
     TCanvas *c3 = new TCanvas("c3","c3",800,600);
     
-    h5->Draw();
+    h5->Draw("E1");
+    h5->SetTitle("; Inv. 4-mass [GeV] ; ");
+    
+    TLatex *Tlogo = new TLatex();
+    Tlogo->SetTextSize(0.075);
+    Tlogo->DrawLatex(3.5*0.78,645*0.85,"#font[22]{CMS}");
+    
+     
+    TLatex smark;
+    smark.SetTextSize(0.034);
+    smark.DrawLatex(0.87*3.5,646, "#sqrt{s} = 13 #font[22]{TeV}");
     
     TCanvas *c4 = new TCanvas("c4","c4",800,600);
     TLatex Tl2;

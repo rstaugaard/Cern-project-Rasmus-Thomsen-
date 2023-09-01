@@ -12,7 +12,7 @@
 #include <utility>
 #include <algorithm>
 
-TFile *file1 = new TFile("../data_files/reduced_data_dxy.root","read");
+TFile *file1 = new TFile("../data_files/reduced_four_track_all.root","read");
 TTree *my_tree = (TTree*)file1->Get("t1");
 
 TH1F *looper = new TH1F("looper","looper",100,0,2);
@@ -20,13 +20,18 @@ TH1F *alltwo = new TH1F("alltwo", "alltwo", 200, 0.2, 1.6);
 TH1F *htwo = new TH1F("htwo", "htwo", 200, 0.2, 1.6);
 TH1F *hfour = new TH1F("hfour", "hfour", 200, 1.1, 3.5);
 
-TH1F *htwo_cut = new TH1F("htwo_cut","htwo_cut",80,0.2,1.8);
-TH1F *hfour_cut = new TH1F("hfour_cut","hfour_cut",50,1.2,3.5);
+TH1F *htwo_cut = new TH1F("htwo_cut","htwo_cut",120,0.2,1.8);
+TH1F *hfour_cut = new TH1F("hfour_cut","hfour_cut",80,1.2,3.5);
+
+TH1F *hstd = new TH1F("hstd","hstd",200,0,5);
 
 TH2F *corr1 = new TH2F("corr1", "corr1",300,0.2,1.6,300,0,5);
 TH2F *corr2 = new TH2F("corr2", "corr2",300,0.2,1.6,300,0,5);
 TH2F *corr3 = new TH2F("corr3", "corr3",300,0.2,1.6,300,0,2.5);
-TH2F *corr4 = new TH2F("corr4", "corr4",300,0.2,1.6,300,0,2.5);
+TH2F *corr4 = new TH2F("corr4", "corr4",300,0.2,1.6,300,0,5);
+TH2F *corr51 = new TH2F("corr51", "corr51",200,0,5,200,0,5);
+TH2F *corr52 = new TH2F("corr52", "corr52",200,0,5,200,0,5);
+TH2F *corr53 = new TH2F("corr53", "corr53",200,0,5,200,0,5);
 
      //  Handy functions     ----------------------------------------------------
 Float_t mpi = 0.1396;
@@ -294,6 +299,17 @@ void unfiltered_analysis()
 	
         std::vector<float> mass = pair_up(pairs);
 	
+	float mean1 = pairs[0].dxy + pairs[1].dxy + pairs[2].dxy + pairs[3].dxy;
+	
+	float stdval1 = TMath::Sqrt(TMath::Power(pairs[0].dxy-mean1,2)+TMath::Power(pairs[1].dxy-mean1,2)+TMath::Power(pairs[2].dxy-mean1,2)+TMath::Power(pairs[3].dxy-mean1,2));
+	
+	float mean2 = pairs[0].dz + pairs[1].dz + pairs[2].dz + pairs[3].dz;
+	
+	float stdval2 = TMath::Sqrt(TMath::Power(pairs[0].dz-mean2,2)+TMath::Power(pairs[1].dz-mean2,2)+TMath::Power(pairs[2].dz-mean2,2)+TMath::Power(pairs[3].dz-mean2,2));
+		
+	hstd->Fill(stdval2);
+	
+	
         if (mass.size() == 0)
         {
             continue;
@@ -305,13 +321,30 @@ void unfiltered_analysis()
 	corr2->Fill(mass[0],red_particle1.dxy+red_particle2.dxy+red_particle3.dxy+red_particle4.dxy);
 	corr2->Fill(mass[1],red_particle1.dxy+red_particle2.dxy+red_particle3.dxy+red_particle4.dxy);
 	
-	corr3->Fill(mass[0],TMath::Abs(red_particle1.px+red_particle2.px+red_particle3.px+red_particle4.px-6500*(ThX)));
-	corr3->Fill(mass[1],TMath::Abs(red_particle1.px+red_particle2.px+red_particle3.px+red_particle4.px-6500*(ThX)));
+	corr3->Fill(mass[0],stdval1);
+	corr3->Fill(mass[1],stdval1);
 	
-	corr4->Fill(mass[0],TMath::Abs(red_particle1.py+red_particle2.py+red_particle3.py+red_particle4.py+6500*(ThY)));
-	corr4->Fill(mass[1],TMath::Abs(red_particle1.py+red_particle2.py+red_particle3.py+red_particle4.py+6500*(ThY)));
+	//TMath::Abs(red_particle1.px+red_particle2.px+red_particle3.px+red_particle4.px-6500*(ThX))
 	
-    
+	corr4->Fill(mass[0],stdval2);
+	corr4->Fill(mass[1],stdval2);
+	
+	if (mass[0] < 0.6 && mass[1] < 0.6)
+	{
+	   corr51->Fill(red_particle1.dxy+red_particle2.dxy+red_particle3.dxy+red_particle4.dxy ,red_particle1.dz+red_particle2.dz+red_particle3.dz+red_particle4.dz );
+	}
+	
+	if ((mass[0] < 0.6 && mass[1] > 0.6) || (mass[0] > 0.6 && mass[1] < 0.6))
+	{
+	   corr52->Fill(red_particle1.dxy+red_particle2.dxy+red_particle3.dxy+red_particle4.dxy ,red_particle1.dz+red_particle2.dz+red_particle3.dz+red_particle4.dz );
+	}
+	
+	if (mass[0] > 0.6 && mass[1] > 0.6)
+	{
+	   corr53->Fill(red_particle1.dxy+red_particle2.dxy+red_particle3.dxy+red_particle4.dxy ,red_particle1.dz+red_particle2.dz+red_particle3.dz+red_particle4.dz );
+	}
+	
+	
         if (TMath::Abs(mass[0]-mrho) < 0.15)
         {
             htwo->Fill(mass[1]);
@@ -323,9 +356,14 @@ void unfiltered_analysis()
             }
     
         }
+	
+	if (stdval1 > 1 || stdval1 < 0.3)
+	{
+	    continue;
+	}
 
-        if (TMath::Abs(red_particle1.py+red_particle2.py+red_particle3.py+red_particle4.py+6500*(ThY)) > 0.2 ||
-	    TMath::Abs(red_particle1.px+red_particle2.px+red_particle3.px+red_particle4.px-6500*(ThX)) > 0.2)
+        if (TMath::Abs(red_particle1.py+red_particle2.py+red_particle3.py+red_particle4.py+6500*(ThY)) > 0.1 ||
+	    TMath::Abs(red_particle1.px+red_particle2.px+red_particle3.px+red_particle4.px-6500*(ThX)) > 0.1)
         {
             continue;
         }
@@ -340,7 +378,7 @@ void unfiltered_analysis()
 	    continue;
 	}
 	
-	if (red_particle1.dxy+red_particle2.dxy+red_particle3.dxy+red_particle4.dxy > 0.6)
+	if (red_particle1.dxy+red_particle2.dxy+red_particle3.dxy+red_particle4.dxy > 0.6 || red_particle1.dxy+red_particle2.dxy+red_particle3.dxy+red_particle4.dxy < 0.15)
 	{
 	    continue;
 	}	
@@ -395,6 +433,12 @@ void unfiltered_analysis()
     
     TCanvas *c8 = new TCanvas("c8","corr4",800,600);
     corr4->Draw("Colz");
+    
+    TCanvas *c9 = new TCanvas("c9","hstd",1800,600);
+    c9->Divide(3,1);
+    c9->cd(1); corr51->Draw("Colz");
+    c9->cd(2); corr52->Draw("Colz");
+    c9->cd(3); corr53->Draw("Colz");
 
 }
 

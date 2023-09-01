@@ -338,48 +338,51 @@ void five_track()
             {
                 for (size_t idx2 = idx1 + 1; idx2 < massList.size(); idx2++)
                 {
-                   Double_t var1 = massList[idx1].var;
-                   Double_t var2 = massList[idx2].var;
-                   int i1 = massList[idx1].i;
-                   int j1 = massList[idx1].j;
-	           int i2 = massList[idx2].i;
-                   int j2 = massList[idx2].j;
-		   Double_t dist1 = massList[idx1].distance;
-		   Double_t dist2 = massList[idx1].distance;
+                    Double_t var1 = massList[idx1].var;
+                    Double_t var2 = massList[idx2].var;
+                    int i1 = massList[idx1].i;
+                    int j1 = massList[idx1].j;
+	            int i2 = massList[idx2].i;
+                    int j2 = massList[idx2].j;
+		    Double_t dist1 = massList[idx1].distance;
+		    Double_t dist2 = massList[idx1].distance;
 		   
 		   
-		   const Double_t threshold = 0.3; 
+		//   const Double_t threshold = 0.3; 
 
                    if (i1 != i2 && j1 != j2 && var1 != 0 && var2 != 0)
                    {
 
                       if (dist1 < 0.4 && dist2 < 0.4)
                       {
-	                    
-                         for (Int_t t = 0 ; t < track; t++)
-                         {
-			      std::cout << dist1 << " " << dist2 << std::endl;
-                              if (t != i1 && t!= j1 && t != i2 && t != j2)
-                              {
-                                  Double_t oDist1 = dist(dxy[t], dz[t], dxy[i1], dz[i1]);
-				  Double_t oDist2 = dist(dxy[t], dz[t], dxy[j1], dz[j1]);
+		      
+		      
+		      
+	              }     
+                //        for (Int_t t = 0 ; t < track; t++)
+                //         {
+		//	      std::cout << dist1 << " " << dist2 << std::endl;
+                //              if (t != i1 && t!= j1 && t != i2 && t != j2)
+                //              {
+                //                  Double_t oDist1 = dist(dxy[t], dz[t], dxy[i1], dz[i1]);
+		//		  Double_t oDist2 = dist(dxy[t], dz[t], dxy[j1], dz[j1]);
 				 
-				  Double_t oDist3 = dist(dxy[t], dz[t], dxy[i2], dz[i2]);
-				  Double_t oDist4 = dist(dxy[t], dz[t], dxy[j2], dz[j2]);
-				  
-                                  if ((oDist1+oDist2)/2 > threshold  && (oDist3+oDist4)/2 > threshold)
-                                  {
-				      d1->Fill(var1, var2);
-                                  }
-                               }
-                          }
+		//		  Double_t oDist3 = dist(dxy[t], dz[t], dxy[i2], dz[i2]);
+		//		  Double_t oDist4 = dist(dxy[t], dz[t], dxy[j2], dz[j2]);
+		//		  
+                //                  if ((oDist1+oDist2)/2 > threshold  && (oDist3+oDist4)/2 > threshold)
+                //                  {
+		//		      d1->Fill(var1, var2);
+                //                  }
+                //               }
+                //          }
 
 
 		 
-                      }	    
-                    }
-                 }
-	     }
+                //      }	    
+                //    }
+                // }
+	     //}
 	       
 		 
 		

@@ -242,7 +242,7 @@ void multitrack_cuts()
     TH1F *h2 = new TH1F("h2","py",200,-2,2);
     TH1F *h3 = new TH1F("h3","pz",200,-5,5);
     
-    TH1F *Allcombs new TH1F("Allcombs","Allcombs",200,0.2,2);
+    TH1F *Allcombs = new TH1F("Allcombs","Allcombs",200,0.2,2);
     
     TH2F *his4 = new TH2F("his4","Delta dxy",100,0,4,100,0.2,1.6);   
     TH2F *his5 = new TH2F("his5","Delta dz",100,0,4,100,0.2,1.6);

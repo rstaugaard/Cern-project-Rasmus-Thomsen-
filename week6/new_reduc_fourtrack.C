@@ -1,32 +1,30 @@
 #include <iostream>
-#include <string>
-
+#include <vector>
+#include <algorithm>
+#include <numeric>
+#include <cmath>
+#include <tuple>
 #include <TFile.h>
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TTree.h>
-#include <TMath.h>
-#include <TMinuit.h>
-#include <TCanvas.h>
-#include <TGraph.h>
-#include <TLegend.h>
-#include <TLatex.h>
-#include <TStyle.h>
+#include <vector>
+#include <utility>
+#include <algorithm>
 
-
-TFile *mainfile1 = new TFile("/eos/cms/store/group/phys_diffraction/CMSTotemLowPU2018/ntuples/data/TOTEM43/110000_noCuts.root","read");
-TTree *my_tree = (TTree*)mainfile1->Get("tree");
+TFile *file1 = new TFile("/eos/cms/store/group/phys_smp/CMS_TOTEM/ntuples/data/TOTEM43.root","read");
+TTree *my_tree = (TTree*)file1->Get("tree");
 
 TH1F *hallmass = new TH1F("hallmass","hallmass", 100,0.2,1.6);
 TH1F *bothmass = new TH1F("bothmass","bothmass", 140,0.2,1.4);
 TH1F *offdiagmass = new TH1F("offdiagmass","offdiagmass", 90,0.2,1.4);
 TH1F *diagmass = new TH1F("diagmass","diagmass", 90,0.2,1.4);
 
-TH1F *h6 = new TH1F("h6","h6", 200,0.2,1.8);
-TH1F *h7 = new TH1F("h7","four-mass", 200,1.2,3.5);
+TH1F *h6 = new TH1F("h6","h6", 90,0.2,1.4);
+TH1F *h7 = new TH1F("h7","four-mass", 40,1.2,3.5);
 
-TH1F *h6_2 = new TH1F("h6_2","h6_2", 100,0.2,1.8);
-TH1F *h7_2 = new TH1F("h7_2","four-mass", 70,1.2,3.5);
+TH1F *h6_2 = new TH1F("h6_2","h6_2", 55,0.2,1.4);
+TH1F *h7_2 = new TH1F("h7_2","four-mass", 30,1.2,3.5);
 
 TH1F *h8 = new TH1F("h8","h8", 140,0.2,1.4);
 TH1F *h9 = new TH1F("h9","h9", 200,-4,4);
@@ -37,69 +35,43 @@ TH2F *d3 = new TH2F("d3","d3",100,0.2,2,100,0,2);
 TH2F *d4 = new TH2F("d4","d4",100,0.2,2,100,0,3);
 TH2F *d5 = new TH2F("d5","d5",100,0,3,100,0,3);
 
-TH1F *h11 = new TH1F("h11","dx", 100, -4,4);
-TH1F *h12 = new TH1F("h12","dy", 100, -4,4);
-TH1F *h13 = new TH1F("h13","dz", 100, -4,4);
-
-// Struct to safe information of a track more conveniently
-
-struct Particle
-{
-    Float_t px;
-    Float_t py;
-    Float_t pz;
-    Int_t charge;
-    Float_t dxy;
-    Float_t dz; 
-    Int_t idx;
-    
-    Particle(const std::vector<Float_t>& m, Int_t c, Float_t d1, Float_t d2, Int_t i) : px(m[0]), py(m[1]), pz(m[2]), charge(c), dxy(d1), dz(d2), idx(i) {}
-};
+TH1F *h11 = new TH1F("h11","dx", 100, -2,2);
+TH1F *h12 = new TH1F("h12","dy", 100, -2,2);
+TH1F *h13 = new TH1F("h13","dz", 100, -3,3);
 
      //  Handy functions     ----------------------------------------------------
 Float_t mpi = 0.1396;
 const Float_t mrho = 0.770;
 
   //Calculate energy assuming pion 
-Float_t calc_E(Particle p1)
+Float_t calc_E(const std::vector<float>& p)
 {
-    return TMath::Sqrt(mpi*mpi+p1.px*p1.px+p1.py*p1.py+p1.pz*p1.pz);
+    return TMath::Sqrt(mpi*mpi+p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
 }
  
  // Calculate invariant two-mass
-Double_t calc_invM(Particle p1, Particle p2)
+Double_t calc_invM(const std::vector<float> p1, const std::vector<float> p2)
 {
     Double_t E1 = calc_E(p1);
     Double_t E2 = calc_E(p2);
     
-    return TMath::Sqrt(TMath::Power(E1+E2,2) - TMath::Power(p1.px+p2.px,2)- TMath::Power(p1.py+p2.py,2)- TMath::Power(p1.pz+p2.pz,2));
+    return TMath::Sqrt(TMath::Power(E1+E2,2) - TMath::Power(p1[0]+p2[0],2)- TMath::Power(p1[1]+p2[1],2)- TMath::Power(p1[2]+p2[2],2));
 }
 
    // Calculate invariant four mass
-Double_t calc_fourmass(std::vector<Particle> pairs)
+Double_t calc_fourmass(std::vector<float> p1, std::vector<float> p2,std::vector<float> p3,std::vector<float> p4)
 {
-    Particle p1 = pairs[0];
-    Particle p2 = pairs[1];
-    Particle p3 = pairs[2];
-    Particle p4 = pairs[3];
-    
     Double_t E1 = calc_E(p1);
     Double_t E2 = calc_E(p2);
     Double_t E3 = calc_E(p3);
     Double_t E4 = calc_E(p4);
     
-    return TMath::Sqrt(TMath::Power(E1+E2+E3+E4,2) - TMath::Power(p1.px+p2.px+p3.px+p4.px,2)- TMath::Power(p1.py+p2.py+p3.py+p4.py,2)- TMath::Power(p1.pz+p2.pz+p3.pz+p4.pz,2));
-}
-
-Float_t vector_sum(Particle p1, Particle p2)
-{
-    Float_t val = TMath::Sqrt(std::pow(p1.px+p2.px,2)+std::pow(p1.py+p2.py,2)+std::pow(p1.pz+p2.pz,2));
-    return val;
+    return TMath::Sqrt(TMath::Power(E1+E2+E3+E4,2) - TMath::Power(p1[0]+p2[0]+p3[0]+p4[0],2)- TMath::Power(p1[1]+p2[1]+p3[1]+p4[1],2)- TMath::Power(p1[2]+p2[2]+p3[2]+p4[2],2));
 }
 
      //  fit functions         ----------------------------------------------------
 
-Double_t gauss(Float_t x,Double_t *par)
+Double_t gauss(float x,Double_t *par)
 {
     Double_t value = par[0]*TMath::Gaus(x,par[1],par[2]);
     return value;
@@ -128,16 +100,16 @@ Int_t numbins;
  
 
    // Custom fcn function (function to be minimized)
-void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
+void fcn(Int_t &npar, double *gin, double &f, double *par, int iflag)
 {
-   Double_t chi2 = 0;
+   double chi2 = 0;
 
    Double_t xval;
    Double_t yval;
    Double_t err;
    Double_t dx;
    numbins = 0;
-   for(Int_t i = 0 ; i < h6->GetNbinsX(); ++i)
+   for(unsigned int i = 0 ; i < h6->GetNbinsX(); ++i)
   {    
        xval = h6->GetBinCenter(i);
        yval = h6->GetBinContent(i);
@@ -175,7 +147,7 @@ void myminimizer(Double_t *par, Double_t *err)
 
     gMinuit2->mnexcm("MINOS", arglist , 2,ierflg);
     
-    for (Int_t j = 0; j < numpar; j++)
+    for (int j = 0; j < numpar; j++)
     {
        gMinuit2->GetParameter(j,par[j],err[j]);
     }
@@ -188,31 +160,34 @@ void myminimizer(Double_t *par, Double_t *err)
  // the distance of the fourth closest entry
  
  
-bool isThreeEntriesCloser(const std::vector<Particle>& input) 
+bool isThreeEntriesCloser(const std::vector<float>& input) 
 {
     if (input.size() != 4) 
     {
+        std::cerr << "Input vector must have exactly four entries.\n";
         return false;
     }
     
 
     // Calculate pairwise distances
-    std::vector<Double_t> distances;
+    std::vector<double> distances;
     for (size_t i = 0; i < input.size(); ++i) 
     {
         for (size_t j = i + 1; j < input.size(); ++j) 
 	{
-            Double_t distance = std::abs(input[i].dxy - input[j].dxy);
+            double distance = std::abs(input[i] - input[j]);
             distances.push_back(distance);
         }
 
     }
     
+    
+
     // Sort distances in ascending order
     std::sort(distances.begin(), distances.end());
 
     // Check if three smallest distances are closer together than the largest distance
-    Double_t sumOfSmallestDistances = distances[0] + distances[1] + distances[2];
+    double sumOfSmallestDistances = distances[0] + distances[1] + distances[2];
     return sumOfSmallestDistances < distances[3];
 }
 
@@ -222,98 +197,187 @@ bool isThreeEntriesCloser(const std::vector<Particle>& input)
 // Then takes the standard deviation. The returned element will be the combination
 // With the lowest standard deviation
 
-std::vector<Particle> reduction(const std::vector<Particle>& data1, const std::vector<Particle>& data2, Float_t ThX, Float_t ThY) 
+std::vector<float> reduction(const std::vector<float>& data, const std::vector<int>& q) 
 {
-    Int_t n1 = data1.size();
-    Int_t n2 = data2.size();
-    std::vector<Particle> result;
-    
-    if (n1 < 2 || n2 < 2) 
+    int n = data.size();
+    if (n < 4) 
     {
-        return result;
+        throw std::invalid_argument("Input vector must have at least four elements.");
     }
-    
-    Double_t minStdDev = 100;
-    
-    for (Int_t i1 = 0; i1 < n1; ++i1) 
+
+    std::vector<float> result;
+    double minStdDev = std::numeric_limits<double>::max();
+
+    // Generate all combinations of four elements from the vector
+    std::vector<int> indices(n);
+    std::iota(indices.begin(), indices.end(), 0);
+    std::vector<float> combination(4, 0.0);
+
+    do 
     {
-        for (Int_t j1 = i1 + 1; j1 < n1; ++j1) 
+        int total_charge = 0;
+        for (int i = 0; i < 4; ++i) 
 	{
-	    for (Int_t i2 = 0; i2 < n2; ++i2)
-	    {
-		for (Int_t j2 = i2 + 1; j2 < n2; ++j2)
-		{   
-		    std::vector<Particle> combination = {data1[i1],data1[j1],data2[i2],data2[j2]};
-		    
-		    // Looper check
-		    if (vector_sum(data1[i1],data2[i2]) < 0.2 || vector_sum(data1[i1],data2[j2]) < 0.2 ||
-		    vector_sum(data1[i2],data2[i2]) < 0.2 || vector_sum(data1[i2],data2[j2]) < 0.2 )
-		    {
-		        continue;
-		    }
-		    
-		    // Check if three is closer
-		    if (isThreeEntriesCloser(combination) == true)
-	            {
-	                continue;
-	            }
-		    		    	    
-	            // Calculate standard deviation
-		    Double_t mean = (combination[0].dxy+combination[1].dxy+combination[2].dxy+combination[3].dxy) / 4.0;
-		    Double_t sumSquaredDiff = 0;
-		    for (Int_t j = 0; j < 4; j++)
-		    {
-			sumSquaredDiff += std::pow(combination[j].dxy - mean,2);
-		    };
-
-		    Double_t stdDev = std::sqrt(sumSquaredDiff / 4.0);
-
-		    // Update result if standard deviation is smaller
-		    if (stdDev < minStdDev) 
-		    {
-			minStdDev = stdDev;
-			result = combination;
-		    }
-		}
-	    }
+            combination[i] = data[indices[i]];
+	    total_charge += q[indices[i]];
+        }
+	
+	if (total_charge != 0)
+	{
+	    continue;
 	}
-    }
+	
+	if (isThreeEntriesCloser(combination) == true)
+	{
+	    continue;
+	}
+	
+
+        // Calculate standard deviation
+        double mean = static_cast<double>(std::accumulate(combination.begin(), combination.end(), 0.0)) / 4.0;
+        double sumSquaredDiff = std::accumulate(combination.begin(), combination.end(), 0.0, [mean](double sum, float num) 
+	{
+            return sum + std::pow(num - mean, 2);
+        });
+        
+	double stdDev = std::sqrt(sumSquaredDiff / 4.0);
+
+        // Update result if standard deviation is smaller
+        if (stdDev < minStdDev) 
+	{
+            minStdDev = stdDev;
+            result = combination;
+        }
+    } 
+    while (std::next_permutation(indices.begin(), indices.end()));
 
     return result;
 }
+
+// Function to check whether elements are close w.r.t some given variable (usually dxy/dz)
+// If the elements are closer than some given threshold, then it returns true
+
+bool areElementsClose(const std::vector<float>& data, float threshold) 
+{
+    for (int i = 0; i < data.size(); i++) 
+    {
+        for (int j = i; j < data.size(); j++)
+	{
+	    float diff = std::abs(data[i] - data[j]);
+            if (diff > threshold) 
+	    {
+                return false; // If the difference exceeds the threshold, elements are not close.
+            }
+	}
+    }
+    
+    return true; // All elements are close enough.
+}
+
+// Find the original indices of a given dxy value
+
+std::vector<int> findIndices(const std::vector<float>& dxy, const std::vector<float>& data)
+{
+    std::vector<int> indxs;
+    for (int i = 0; i < data.size(); i++) // Loop through dxy
+    {
+        for(int j = 0; j < dxy.size(); j++) // Loop through 4-pair
+	{
+	    if (data[i] == dxy[j])  //  If the dxy equals reduced pair then give index
+	    {
+	        indxs.push_back(j);
+		break;
+	    }
+	}
+    }
+    
+    return indxs;
+}
+
+// Working idea 
+bool isSplitThreeTrack(std::vector<float> picked_dxys,std::vector<float> remaining_dxys)
+{
+    int count = 0;
+    for(int i = 0; i < picked_dxys.size(); i++)
+    {
+        float Largest_distance = 0;
+        float distance1;
+	for (int j = 0; j < picked_dxys.size(); j++)
+	{
+	    distance1 = TMath::Abs(picked_dxys[i]-picked_dxys[j]);
+	    if (distance1 > Largest_distance)
+	    {
+	        Largest_distance = distance1;
+	    }
+	}
+	
+	float Smallest_distance = 100;
+	float distance2;
+	for (int k = 0; k < remaining_dxys.size(); k++)
+	{
+	    distance2 = TMath::Abs(picked_dxys[i]-remaining_dxys[k]);
+	    if (distance2 < Smallest_distance)
+	    {
+	        Smallest_distance = distance2;
+	    }
+	
+	}
+	
+	if (Largest_distance > Smallest_distance)
+	{
+	   count += 1;
+	   if (count == 2)
+	   {
+	       return true;
+	   }
+	}
+    }
+    
+    return false;
+}
+
+
+
+
+
+// Struct to safe information of a track more conveniently
+
+struct Particle
+{
+    std::vector<float> momenta;
+    int charge;
+    float dz; 
+    
+    Particle(const std::vector<float>& m, int c, float d) : momenta(m), charge(c), dz(d) {}
+};
 
 // Function to determine the two different ways to pair up (construct two-mass) of a net-neutral four track
 // It will return the pair of two (of the two) two-masses, which have the smallest difference in
 // some variable (usually dz)
 
-std::vector<Float_t> pair_up(std::vector <Particle> pairs)
+std::vector<float> pair_up(Particle p1, Particle p2, Particle p3, Particle p4)
 {
-    Particle p1 = pairs[0];
-    Particle p2 = pairs[1];
-    Particle p3 = pairs[2];
-    Particle p4 = pairs[3];
-    
-    Float_t mass1, mass2, mass3, mass4;
-    Float_t DeltaDxy1, DeltaDxy2, DeltaDxy3, DeltaDxy4;
+    float mass1, mass2, mass3, mass4;
+    float DeltaDxy1, DeltaDxy2, DeltaDxy3, DeltaDxy4;
     
     if (p1.charge + p2.charge == 0)
     {
-        mass1 = calc_invM(p1, p2);
-        mass2 = calc_invM(p3, p4);
+        mass1 = calc_invM(p1.momenta, p2.momenta);
+        mass2 = calc_invM(p3.momenta, p4.momenta);
         DeltaDxy1 = TMath::Abs(p1.dz - p2.dz);
         DeltaDxy2 = TMath::Abs(p2.dz - p3.dz);
 	
 	if (p1.charge + p3.charge == 0)
         {
-            mass3 = calc_invM(p1, p3);
-            mass4 = calc_invM(p2, p4);
+            mass3 = calc_invM(p1.momenta, p3.momenta);
+            mass4 = calc_invM(p2.momenta, p4.momenta);
             DeltaDxy3 = TMath::Abs(p1.dz - p3.dz);
             DeltaDxy4 = TMath::Abs(p2.dz - p4.dz);
         }
         else
         {
-            mass3 = calc_invM(p1, p4);
-            mass4 = calc_invM(p2, p3);
+            mass3 = calc_invM(p1.momenta, p4.momenta);
+            mass4 = calc_invM(p2.momenta, p3.momenta);
             DeltaDxy3 = TMath::Abs(p1.dz - p4.dz);
             DeltaDxy4 = TMath::Abs(p2.dz - p3.dz);
         }
@@ -321,13 +385,13 @@ std::vector<Float_t> pair_up(std::vector <Particle> pairs)
     }
     else
     {
-        mass1 = calc_invM(p1, p3);
-        mass2 = calc_invM(p2, p4);
+        mass1 = calc_invM(p1.momenta, p3.momenta);
+        mass2 = calc_invM(p2.momenta, p4.momenta);
         DeltaDxy1 = TMath::Abs(p1.dz - p2.dz);
         DeltaDxy2 = TMath::Abs(p2.dz - p3.dz);
 	
-	mass3 = calc_invM(p1, p4);
-        mass4 = calc_invM(p2, p3);
+	mass3 = calc_invM(p1.momenta, p4.momenta);
+        mass4 = calc_invM(p2.momenta, p3.momenta);
         DeltaDxy3 = TMath::Abs(p1.dz - p4.dz);
         DeltaDxy4 = TMath::Abs(p2.dz - p3.dz);
     }
@@ -335,8 +399,7 @@ std::vector<Float_t> pair_up(std::vector <Particle> pairs)
     d1->Fill(mass1,mass2);
     d1->Fill(mass3,mass4);
     
-    std::vector<Float_t> masses;
-    
+    std::vector<float> masses;
     if (DeltaDxy1 + DeltaDxy2 > DeltaDxy3 + DeltaDxy4)
     {
 	masses.push_back(mass3);
@@ -390,81 +453,28 @@ std::vector<Float_t> pair_up(std::vector <Particle> pairs)
     return masses; 
 }
 
-struct tree_variables
-{
-    Float_t px[6];
-    Float_t py[6];
-    Float_t pz[6];
-    Float_t pT[6];
-    Int_t q[6];
-    Float_t dxy[6];
-    Float_t dz[6];
-    Float_t eta[6];
-    Float_t ThX[1];
-    Float_t ThY[1];
-    
-    Int_t indx[4];
-    Float_t red_dxy[4];
-    Float_t red_q[4];
-    Float_t red_dz[4];
-    Float_t red_px[4];
-    Float_t red_py[4];
-    Float_t red_pz[4];
-};
+
+
+
 
 
 //                     ----------------------------------------------------
 
-Int_t main(Int_t argc, char* argv[])
-{    
-    if (argc != 5)
-    {
-        std::cout << "Could not run" << std::endl;
-	return 0;
-    }
-    
-    std::string filePath = "../data_files/" + std::string(argv[1]) + "/" + std::string(argv[2]);
-    
-    Int_t start = std::stoi(argv[3]);
-    Int_t stop = std::stoi(argv[4]);
-    
-    TFile file2(filePath.c_str(), "RECREATE");
-
-    TTree t1("t1","tree1");
-
-
-    tree_variables tvars;
-    t1.Branch("px",tvars.px,"px[6]/F");
-    t1.Branch("py",tvars.py,"py[6]/F");
-    t1.Branch("pz",tvars.pz,"pz[6]/F");
-    t1.Branch("pT",tvars.pT,"pT[6]/F");
-    t1.Branch("q",tvars.q,"q[6]/I");
-    t1.Branch("dxy",tvars.dxy,"dxy[6]/F");
-    t1.Branch("dz",tvars.dz,"dz[6]/F");
-    t1.Branch("eta",tvars.eta,"eta[6]/F");
-    t1.Branch("ThX",tvars.ThX,"ThX[1]/F");
-    t1.Branch("ThY",tvars.ThY,"ThY[1]/F");
-
-    t1.Branch("indx",tvars.indx,"indx[4]/I");
-    t1.Branch("red_q",tvars.red_q,"red_q[4]/I");
-    t1.Branch("red_dxy",tvars.red_dxy,"red_dxy[4]/F");
-    t1.Branch("red_dz",tvars.red_dz,"red_dz[4]/F");
-    t1.Branch("red_px",tvars.red_px,"red_px[4]/F");
-    t1.Branch("red_py",tvars.red_py,"red_py[4]/F");
-    t1.Branch("red_pz",tvars.red_pz,"red_pz[4]/F");
-
-    TH1F *h1 = new TH1F("h1","h1", 200,-4,4);
-    TH1F *h2 = new TH1F("h2","h2", 200,-4,4);
-    TH1F *h3 = new TH1F("h3","h3", 200,-4,4);
+void new_reduc_fourtrack()
+{
+    TH1F *h1 = new TH1F("h1","h1", 200,-2,2);
+    TH1F *h2 = new TH1F("h2","h2", 200,-2,2);
+    TH1F *h3 = new TH1F("h3","h3", 200,-2,2);
     
     TH2F *d1 = new TH2F("d1","d1",100,0.2,1.6,100,0.2,1.6);
     
     // Create variables to store the data
     
-    static Float_t trk_pt[4000], trk_eta[4000], trk_phi[4000], trk_dedx[4000], trk_p[4000], trk_dxy[4000], trk_dz[4000];
+    static Float_t trk_pt[420], trk_eta[420], trk_phi[420], trk_dedx[420], trk_p[420], trk_dxy[420], trk_dz[420];
+    static Int_t trk_isK[420], trk_isPi[420], trk_isP[420];
     
     static Float_t ThxR, ThxL, ThyR, ThyL, zPV;
-    static Int_t trk_q[4000];
+    static Int_t trk_q[420];
     static Int_t ntrk;
     
     // Create branches of the TTree we are loading in
@@ -486,18 +496,14 @@ Int_t main(Int_t argc, char* argv[])
     
     my_tree->SetBranchAddress("ntrk",&ntrk);
  
-    Int_t numEnt = my_tree->GetEntries();
-    Int_t track = 6;
-    
-    std::cout << "Entries: " << " " << numEnt << std::endl;
+    int numEnt = my_tree->GetEntries();
+    Int_t track = 4;
     
     // Load in a given n-track
-    
-    Int_t count = 0;
-    
-    for (Int_t irow = start; irow< stop; irow++)
+
+    for (int irow = 0; irow< numEnt; irow++)
     {    
-	my_tree->GetEntry(irow);
+        my_tree->GetEntry(irow);
         if (ntrk == track)
 	{
 	    Float_t px[track];
@@ -512,15 +518,18 @@ Int_t main(Int_t argc, char* argv[])
 	    Float_t dxy[track];
 	    Float_t dz[track];
 	    
+	    Int_t isPi[track];
+	    Int_t isP[track];
+	    Int_t isK[track];
 	    
-	    std::vector<Float_t> dxys;
-	    std::vector<Float_t> dzs;
-	    std::vector<Float_t> dds;
-	    std::vector<Int_t> qs;
+	    std::vector<float> dxys;
+	    std::vector<float> dzs;
+	    std::vector<float> dds;
+	    std::vector<int> qs;
 	    
 	    // Define variables
 	    
-	    for (Int_t i = 0; i < track; i++)
+	    for (int i = 0; i < track; i++)
 	    {   
 	        px[i] = trk_pt[i]*TMath::Cos(trk_phi[i]);
 	        py[i] = trk_pt[i]*TMath::Sin(trk_phi[i]);
@@ -528,58 +537,25 @@ Int_t main(Int_t argc, char* argv[])
 		pt[i] = trk_pt[i];
 		p[i] = trk_p[i];
 		q[i] = trk_q[i];
-		
 		dxy[i] = trk_dxy[i];
 		dz[i] = trk_dz[i];
+		
 		dxys.push_back(TMath::Abs(dxy[i]));
 		dzs.push_back(TMath::Abs(dz[i]));
 		qs.push_back(q[i]);
 		dds.push_back(TMath::Sqrt(dz[i]*dz[i]+dxy[i]*dxy[i]));
-		
-		
-		 tvars.px[i] = px[i];
-	         tvars.py[i] = py[i];
-	         tvars.pz[i] = pz[i];
-	         tvars.pT[i] = pt[i];
-	         tvars.q[i] = q[i];
-	         tvars.dz[i] = dz[i];
-	         tvars.eta[i] = eta[i];
+
 	    }
-	   
-	    std::vector<Float_t> p1 = {px[0],py[0],pz[0]};
-	    std::vector<Float_t> p2 = {px[1],py[1],pz[1]};
-	    std::vector<Float_t> p3 = {px[2],py[2],pz[2]};
-	    std::vector<Float_t> p4 = {px[3],py[3],pz[3]};
-	    std::vector<Float_t> p5 = {px[4],py[4],pz[4]};
-	    std::vector<Float_t> p6 = {px[5],py[5],pz[5]};
 	    
-	    Particle particle1(p1,qs[0],TMath::Abs(dxy[0]) ,TMath::Abs(dz[0]), 0);
-	    Particle particle2(p2,qs[1], TMath::Abs(dxy[1]),TMath::Abs(dz[1]), 1);
-	    Particle particle3(p3,qs[2], TMath::Abs(dxy[2]),TMath::Abs(dz[2]), 2);
-	    Particle particle4(p4,qs[3], TMath::Abs(dxy[3]),TMath::Abs(dz[3]), 3);
-	    Particle particle5(p5,qs[4], TMath::Abs(dxy[4]),TMath::Abs(dz[4]), 4);
-	    Particle particle6(p6,qs[5],TMath::Abs(dxy[5]) ,TMath::Abs(dz[5]), 5);
+	    // Check momentum conservation in histograms
 	    
+	    h1->Fill(px[0]+px[1]+px[2]+px[3]+px[4]+px[5]-6500*(ThxL+ThxR));
+	    h2->Fill(py[0]+py[1]+py[2]+py[3]+py[4]+py[5]+6500*(ThyL+ThyR));
+	    h3->Fill(pz[0]+pz[1]+pz[2]+pz[3]+pz[4]+pz[5]);
 	    
-	    std::vector<Particle> allparticles= {particle1,particle2,particle3,particle4,particle5,particle6};
-	    std::vector<Particle> dataplus;
-	    std::vector<Particle> dataminus;
-	    
-	    for (Int_t i = 0; i < track; i++)
-	    {
-	        if(q[i] > 0)
-		{
-		    dataplus.push_back(allparticles[i]);
-		}
-		
-		else
-		{
-		    dataminus.push_back(allparticles[i]);
-		}
-	    }
 	    
 	    // Reduce track to 4-track	
-	    std::vector<Particle> pairs = reduction(dataplus,dataminus, ThxL+ThxR, ThyL+ThyR);
+	    std::vector<float> pairs = reduction(dxys,qs);
 	    
 	    // If no 4-track is found, then continue to next data point
 	    if (pairs.size() == 0)
@@ -587,42 +563,37 @@ Int_t main(Int_t argc, char* argv[])
 	        continue;
 	    }
 
-	   
-	    if (count < 20)
-	    {
+	    
 	    // Check if things work as intended 
-	        std::cout<< dxy[0] << " , " << dxy[1] << " , " << dxy[2] << " , " << dxy[3] << " , " << dxy[4] << " , " << dxy[5] << std::endl;
-	        std::cout<< qs[0] << " , " << qs[1] << " , " << qs[2] << " , " << qs[3] << " , " << qs[4] << "  ,  " << qs[5]<< std::endl;
-	        std::cout<< "Reduction;" << " " << pairs[0].dxy << " , " << pairs[1].dxy << " , " << pairs[2].dxy << " , " << pairs[3].dxy << std::endl;
-		std::cout<< pairs[0].idx << " , " << pairs[1].idx << " , " << pairs[2].idx << " , " << pairs[3].idx << std::endl;
-	    }
+	    std::cout<< dxy[0] << " , " << dxy[1] << " , " << dxy[2] << " , " << dxy[3] << std::endl;
+	    std::cout<< qs[0] << " , " << qs[1] << " , " << qs[2] << " , " << qs[3] << std::endl;
+	    std::cout<< "Reduction;" << " " << pairs[0] << " , " << pairs[1] << " , " << pairs[2] << " , " << pairs[3] << std::endl;
 	    
-	    count += 1;
-	  
-	    tvars.ThX[0] = ThxL+ThxR;
-            tvars.ThY[0] = ThyL+ThyR;
 	    
-	    for (Int_t m = 0; m < 4; m++)
-	    {
-	        tvars.indx[m] = pairs[m].idx;
-		tvars.red_q[m] = pairs[m].charge;
-		tvars.red_dxy[m] = pairs[m].dxy;
-	        tvars.red_dz[m] = pairs[m].dz;
-	        tvars.red_px[m] = pairs[m].px;
-	        tvars.red_py[m] = pairs[m].py;
-	        tvars.red_pz[m] = pairs[m].pz;
-	    }
+            // Find indices to store data in particle-struct
 	    
-	    t1.Fill();
-	   
+	    std::vector<int> indxs = findIndices(dxys,pairs);
+	    
+	    // Check momentum conservation in four-track
+	    h11->Fill(px[indxs[0]]+px[indxs[1]]+px[indxs[2]]+px[indxs[3]]-6500*(ThxL+ThxR));
+	    h12->Fill(py[indxs[0]]+py[indxs[1]]+py[indxs[2]]+py[indxs[3]]+6500*(ThyL+ThyR));
+	    h13->Fill(pz[indxs[0]]+pz[indxs[1]]+pz[indxs[2]]+pz[indxs[3]]);
+	    
+	    std::cout<< indxs[0] << " , " << indxs[1] << " , " << indxs[2] << " , " << indxs[3] << std::endl;
+	    
+	    std::vector<float> p1 = {px[indxs[0]],py[indxs[0]],pz[indxs[0]]};
+	    std::vector<float> p2 = {px[indxs[1]],py[indxs[1]],pz[indxs[1]]};
+	    std::vector<float> p3 = {px[indxs[2]],py[indxs[2]],pz[indxs[2]]};
+	    std::vector<float> p4 = {px[indxs[3]],py[indxs[3]],pz[indxs[3]]};
+	    
+	    Particle particle1(p1,qs[indxs[0]], TMath::Abs(dzs[indxs[0]]));
+	    Particle particle2(p2,qs[indxs[1]], TMath::Abs(dzs[indxs[1]]));
+	    Particle particle3(p3,qs[indxs[2]], TMath::Abs(dzs[indxs[2]]));
+	    Particle particle4(p4,qs[indxs[3]], TMath::Abs(dzs[indxs[3]]));
+	    
+	    
 	    // Finally pair up the 4-track into two 2-tracks
-	    std::vector<Float_t> mass = pair_up(pairs);
-	    
-	    if (mass.size() == 0)
-	    {
-	        continue;
-	    }
-
+	    std::vector<float> mass = pair_up(particle1,particle2,particle3,particle4);
 	    
 	    // Cut on the 2-mass, so we only consider interesting pairs
 	    if (TMath::Abs(mass[0]-mrho) < 0.15)
@@ -630,21 +601,21 @@ Int_t main(Int_t argc, char* argv[])
 	        h6->Fill(mass[1]);
 		if (TMath::Abs(mass[1]-mrho) < 0.15)
 		{
-		    h7->Fill(calc_fourmass(pairs));
+		    h7->Fill(calc_fourmass(p1,p2,p3,p4));
 		    
 		}
 		
 		
 	    }
 	    
-	    if (TMath::Abs(pairs[0].px+pairs[1].px+pairs[2].px+pairs[3].px-6500*(ThxL+ThxR))< 0.15 && TMath::Abs(pairs[0].py+pairs[1].py+pairs[2].py+pairs[3].py+6500*(ThyL+ThyR)) < 0.15)
+	    if (TMath::Abs(px[indxs[0]]+px[indxs[1]]+px[indxs[2]]+px[indxs[3]]-6500*(ThxL+ThxR))< 0.25 && TMath::Abs(py[indxs[0]]+py[indxs[1]]+py[indxs[2]]+py[indxs[3]]+6500*(ThyL+ThyR)) < 0.25)
 	    {
 	        if (TMath::Abs(mass[0]-mrho) < 0.15)
 	        {
 	            h6_2->Fill(mass[1]);
 		    if (TMath::Abs(mass[1]-mrho) < 0.15)
 		    {
-		        h7_2->Fill(calc_fourmass(pairs));
+		        h7_2->Fill(calc_fourmass(p1,p2,p3,p4));
 		    
 		    } 
 		
@@ -653,11 +624,9 @@ Int_t main(Int_t argc, char* argv[])
 	    }
 	    
         }
-       
-	
-      
      }
-    
+      
+      
     TCanvas *c1 = new TCanvas("c1","c1",1800,800);
     c1->Divide(3,1);
 
@@ -730,11 +699,11 @@ Int_t main(Int_t argc, char* argv[])
     
     TLatex s1;
     s1.SetTextSize(0.06);
-    s1.DrawLatex(0.82*1.4,218, "#font[22]{CMS}");
+    s1.DrawLatex(0.82*1.4,675, "#font[22]{CMS}");
     
     TLatex s2;
     s2.SetTextSize(0.034);
-    s2.DrawLatex(0.87*1.4,241, "#sqrt{s} = 13 #font[22]{TeV}");
+    s2.DrawLatex(0.87*1.4,750, "#sqrt{s} = 13 #font[22]{TeV}");
    
     TCanvas *c7 = new TCanvas("c7","c7",1600,600);
     c7->Divide(2,1);
@@ -763,21 +732,21 @@ Int_t main(Int_t argc, char* argv[])
     
   
   
-    //cout << "Number of bins: " << "  "  << numbins << std::endl;
-    //cout << "mu: " << "  "  << params[3] << "+-" << errs[3] << std::endl;
-    //cout << "sigma: " << "  "  << params[4] << "+-" << errs[4] << std::endl;
-    //cout << "Significans: " << "  "  << params[2]/errs[2]  << std::endl;
+    std::cout << "Number of bins: " << "  "  << numbins << std::endl;
+    std::cout << "mu: " << "  "  << params[3] << "+-" << errs[3] << std::endl;
+    std::cout << "sigma: " << "  "  << params[4] << "+-" << errs[4] << std::endl;
+    std::cout << "Significans: " << "  "  << params[2]/errs[2]  << std::endl;
     
     TCanvas *c8 = new TCanvas("c8","c8",800,600);
     h7->Draw("E1");
     
     TLatex s3;
     s3.SetTextSize(0.06);
-    s3.DrawLatex(0.82*3,222, "#font[22]{CMS}");
+    s3.DrawLatex(0.82*3.5,700, "#font[22]{CMS}");
     
     TLatex s4;
     s4.SetTextSize(0.034);
-    s4.DrawLatex(0.87*3,260, "#sqrt{s} = 13 #font[22]{TeV}");
+    s4.DrawLatex(0.87*3.5,870, "#sqrt{s} = 13 #font[22]{TeV}");
     
     h7->SetTitle(" ; Inv. 4-Mass [GeV] ; ");
     
@@ -854,6 +823,9 @@ Int_t main(Int_t argc, char* argv[])
     diagmass->SetMarkerColorAlpha(kBlue,0.5);
     diagmass->SetTitle("Selected ; Inv. Mass [GeV] ; ");
     
+    TLatex t1;
+    t1.SetTextSize(0.06);
+    t1.DrawLatex(0.76*1.4,1.95, "#font[22]{CMS}");
     
     TLatex t2;
     t2.SetTextSize(0.034);
@@ -881,8 +853,6 @@ Int_t main(Int_t argc, char* argv[])
     
     
     //offdiagmass->Draw("E1");
-    
-    return 0;
     
     
 }

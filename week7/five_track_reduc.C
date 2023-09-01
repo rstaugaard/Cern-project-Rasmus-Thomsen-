@@ -241,6 +241,8 @@ std::vector<Particle> reduction(const std::vector<Particle>& data1, const std::v
 	    {
 		for (int j2 = i2 + 1; j2 < n2; ++j2)
 		{
+		    
+		    // Looper check
 		    if (vector_sum(data1[i1],data2[i2]) < 0.2 || vector_sum(data1[i1],data2[j2]) < 0.2 ||
 		    vector_sum(data1[i2],data2[i2]) < 0.2 || vector_sum(data1[i2],data2[j2]) < 0.2 )
 		    {

@@ -1,18 +1,16 @@
 #include <iostream>
-#include <string>
-
+#include <vector>
+#include <algorithm>
+#include <numeric>
+#include <cmath>
+#include <tuple>
 #include <TFile.h>
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TTree.h>
-#include <TMath.h>
-#include <TMinuit.h>
-#include <TCanvas.h>
-#include <TGraph.h>
-#include <TLegend.h>
-#include <TLatex.h>
-#include <TStyle.h>
-
+#include <vector>
+#include <utility>
+#include <algorithm>
 
 TFile *mainfile1 = new TFile("/eos/cms/store/group/phys_diffraction/CMSTotemLowPU2018/ntuples/data/TOTEM43/110000_noCuts.root","read");
 TTree *my_tree = (TTree*)mainfile1->Get("tree");
@@ -45,15 +43,15 @@ TH1F *h13 = new TH1F("h13","dz", 100, -4,4);
 
 struct Particle
 {
-    Float_t px;
-    Float_t py;
-    Float_t pz;
-    Int_t charge;
-    Float_t dxy;
-    Float_t dz; 
-    Int_t idx;
+    float px;
+    float py;
+    float pz;
+    int charge;
+    float dxy;
+    float dz; 
+    int idx;
     
-    Particle(const std::vector<Float_t>& m, Int_t c, Float_t d1, Float_t d2, Int_t i) : px(m[0]), py(m[1]), pz(m[2]), charge(c), dxy(d1), dz(d2), idx(i) {}
+    Particle(const std::vector<float>& m, int c, float d1,float d2, int i) : px(m[0]), py(m[1]), pz(m[2]), charge(c), dxy(d1), dz(d2), idx(i) {}
 };
 
      //  Handy functions     ----------------------------------------------------
@@ -99,7 +97,7 @@ Float_t vector_sum(Particle p1, Particle p2)
 
      //  fit functions         ----------------------------------------------------
 
-Double_t gauss(Float_t x,Double_t *par)
+Double_t gauss(float x,Double_t *par)
 {
     Double_t value = par[0]*TMath::Gaus(x,par[1],par[2]);
     return value;
@@ -128,16 +126,16 @@ Int_t numbins;
  
 
    // Custom fcn function (function to be minimized)
-void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
+void fcn(Int_t &npar, double *gin, double &f, double *par, int iflag)
 {
-   Double_t chi2 = 0;
+   double chi2 = 0;
 
    Double_t xval;
    Double_t yval;
    Double_t err;
    Double_t dx;
    numbins = 0;
-   for(Int_t i = 0 ; i < h6->GetNbinsX(); ++i)
+   for(unsigned int i = 0 ; i < h6->GetNbinsX(); ++i)
   {    
        xval = h6->GetBinCenter(i);
        yval = h6->GetBinContent(i);
@@ -175,7 +173,7 @@ void myminimizer(Double_t *par, Double_t *err)
 
     gMinuit2->mnexcm("MINOS", arglist , 2,ierflg);
     
-    for (Int_t j = 0; j < numpar; j++)
+    for (int j = 0; j < numpar; j++)
     {
        gMinuit2->GetParameter(j,par[j],err[j]);
     }
@@ -192,17 +190,18 @@ bool isThreeEntriesCloser(const std::vector<Particle>& input)
 {
     if (input.size() != 4) 
     {
+        std::cerr << "Input vector must have exactly four entries.\n";
         return false;
     }
     
 
     // Calculate pairwise distances
-    std::vector<Double_t> distances;
+    std::vector<double> distances;
     for (size_t i = 0; i < input.size(); ++i) 
     {
         for (size_t j = i + 1; j < input.size(); ++j) 
 	{
-            Double_t distance = std::abs(input[i].dxy - input[j].dxy);
+            double distance = std::abs(input[i].dxy - input[j].dxy);
             distances.push_back(distance);
         }
 
@@ -212,7 +211,7 @@ bool isThreeEntriesCloser(const std::vector<Particle>& input)
     std::sort(distances.begin(), distances.end());
 
     // Check if three smallest distances are closer together than the largest distance
-    Double_t sumOfSmallestDistances = distances[0] + distances[1] + distances[2];
+    double sumOfSmallestDistances = distances[0] + distances[1] + distances[2];
     return sumOfSmallestDistances < distances[3];
 }
 
@@ -222,10 +221,10 @@ bool isThreeEntriesCloser(const std::vector<Particle>& input)
 // Then takes the standard deviation. The returned element will be the combination
 // With the lowest standard deviation
 
-std::vector<Particle> reduction(const std::vector<Particle>& data1, const std::vector<Particle>& data2, Float_t ThX, Float_t ThY) 
+std::vector<Particle> reduction(const std::vector<Particle>& data1, const std::vector<Particle>& data2, float ThX, float ThY) 
 {
-    Int_t n1 = data1.size();
-    Int_t n2 = data2.size();
+    int n1 = data1.size();
+    int n2 = data2.size();
     std::vector<Particle> result;
     
     if (n1 < 2 || n2 < 2) 
@@ -233,15 +232,15 @@ std::vector<Particle> reduction(const std::vector<Particle>& data1, const std::v
         return result;
     }
     
-    Double_t minStdDev = 100;
+    double minStdDev = 100;
     
-    for (Int_t i1 = 0; i1 < n1; ++i1) 
+    for (int i1 = 0; i1 < n1; ++i1) 
     {
-        for (Int_t j1 = i1 + 1; j1 < n1; ++j1) 
+        for (int j1 = i1 + 1; j1 < n1; ++j1) 
 	{
-	    for (Int_t i2 = 0; i2 < n2; ++i2)
+	    for (int i2 = 0; i2 < n2; ++i2)
 	    {
-		for (Int_t j2 = i2 + 1; j2 < n2; ++j2)
+		for (int j2 = i2 + 1; j2 < n2; ++j2)
 		{   
 		    std::vector<Particle> combination = {data1[i1],data1[j1],data2[i2],data2[j2]};
 		    
@@ -259,14 +258,14 @@ std::vector<Particle> reduction(const std::vector<Particle>& data1, const std::v
 	            }
 		    		    	    
 	            // Calculate standard deviation
-		    Double_t mean = (combination[0].dxy+combination[1].dxy+combination[2].dxy+combination[3].dxy) / 4.0;
-		    Double_t sumSquaredDiff = 0;
-		    for (Int_t j = 0; j < 4; j++)
+		    double mean = (combination[0].dxy+combination[1].dxy+combination[2].dxy+combination[3].dxy) / 4.0;
+		    double sumSquaredDiff = 0;
+		    for (int j = 0; j < 4; j++)
 		    {
 			sumSquaredDiff += std::pow(combination[j].dxy - mean,2);
 		    };
 
-		    Double_t stdDev = std::sqrt(sumSquaredDiff / 4.0);
+		    double stdDev = std::sqrt(sumSquaredDiff / 4.0);
 
 		    // Update result if standard deviation is smaller
 		    if (stdDev < minStdDev) 
@@ -286,15 +285,15 @@ std::vector<Particle> reduction(const std::vector<Particle>& data1, const std::v
 // It will return the pair of two (of the two) two-masses, which have the smallest difference in
 // some variable (usually dz)
 
-std::vector<Float_t> pair_up(std::vector <Particle> pairs)
+std::vector<float> pair_up(std::vector <Particle> pairs)
 {
     Particle p1 = pairs[0];
     Particle p2 = pairs[1];
     Particle p3 = pairs[2];
     Particle p4 = pairs[3];
     
-    Float_t mass1, mass2, mass3, mass4;
-    Float_t DeltaDxy1, DeltaDxy2, DeltaDxy3, DeltaDxy4;
+    float mass1, mass2, mass3, mass4;
+    float DeltaDxy1, DeltaDxy2, DeltaDxy3, DeltaDxy4;
     
     if (p1.charge + p2.charge == 0)
     {
@@ -335,7 +334,7 @@ std::vector<Float_t> pair_up(std::vector <Particle> pairs)
     d1->Fill(mass1,mass2);
     d1->Fill(mass3,mass4);
     
-    std::vector<Float_t> masses;
+    std::vector<float> masses;
     
     if (DeltaDxy1 + DeltaDxy2 > DeltaDxy3 + DeltaDxy4)
     {
@@ -415,20 +414,9 @@ struct tree_variables
 
 //                     ----------------------------------------------------
 
-Int_t main(Int_t argc, char* argv[])
-{    
-    if (argc != 5)
-    {
-        std::cout << "Could not run" << std::endl;
-	return 0;
-    }
-    
-    std::string filePath = "../data_files/" + std::string(argv[1]) + "/" + std::string(argv[2]);
-    
-    Int_t start = std::stoi(argv[3]);
-    Int_t stop = std::stoi(argv[4]);
-    
-    TFile file2(filePath.c_str(), "RECREATE");
+void four_track_reduc()
+{
+    TFile file2("../data_files/reduced_four_track_all.root","RECREATE");
 
     TTree t1("t1","tree1");
 
@@ -453,6 +441,11 @@ Int_t main(Int_t argc, char* argv[])
     t1.Branch("red_py",tvars.red_py,"red_py[4]/F");
     t1.Branch("red_pz",tvars.red_pz,"red_pz[4]/F");
 
+    
+    
+    int nthreads = 4;
+    ROOT::EnableImplicitMT(nthreads);
+    
     TH1F *h1 = new TH1F("h1","h1", 200,-4,4);
     TH1F *h2 = new TH1F("h2","h2", 200,-4,4);
     TH1F *h3 = new TH1F("h3","h3", 200,-4,4);
@@ -486,18 +479,16 @@ Int_t main(Int_t argc, char* argv[])
     
     my_tree->SetBranchAddress("ntrk",&ntrk);
  
-    Int_t numEnt = my_tree->GetEntries();
-    Int_t track = 6;
-    
-    std::cout << "Entries: " << " " << numEnt << std::endl;
+    int numEnt = my_tree->GetEntries();
+    Int_t track = 4;
     
     // Load in a given n-track
     
-    Int_t count = 0;
-    
-    for (Int_t irow = start; irow< stop; irow++)
+    int count = 0;
+
+    for (int irow = 0; irow< numEnt; irow++)
     {    
-	my_tree->GetEntry(irow);
+        my_tree->GetEntry(irow);
         if (ntrk == track)
 	{
 	    Float_t px[track];
@@ -512,15 +503,14 @@ Int_t main(Int_t argc, char* argv[])
 	    Float_t dxy[track];
 	    Float_t dz[track];
 	    
-	    
-	    std::vector<Float_t> dxys;
-	    std::vector<Float_t> dzs;
-	    std::vector<Float_t> dds;
-	    std::vector<Int_t> qs;
+	    std::vector<float> dxys;
+	    std::vector<float> dzs;
+	    std::vector<float> dds;
+	    std::vector<int> qs;
 	    
 	    // Define variables
 	    
-	    for (Int_t i = 0; i < track; i++)
+	    for (int i = 0; i < track; i++)
 	    {   
 	        px[i] = trk_pt[i]*TMath::Cos(trk_phi[i]);
 	        py[i] = trk_pt[i]*TMath::Sin(trk_phi[i]);
@@ -546,26 +536,21 @@ Int_t main(Int_t argc, char* argv[])
 	         tvars.eta[i] = eta[i];
 	    }
 	   
-	    std::vector<Float_t> p1 = {px[0],py[0],pz[0]};
-	    std::vector<Float_t> p2 = {px[1],py[1],pz[1]};
-	    std::vector<Float_t> p3 = {px[2],py[2],pz[2]};
-	    std::vector<Float_t> p4 = {px[3],py[3],pz[3]};
-	    std::vector<Float_t> p5 = {px[4],py[4],pz[4]};
-	    std::vector<Float_t> p6 = {px[5],py[5],pz[5]};
+	    std::vector<float> p1 = {px[0],py[0],pz[0]};
+	    std::vector<float> p2 = {px[1],py[1],pz[1]};
+	    std::vector<float> p3 = {px[2],py[2],pz[2]};
+	    std::vector<float> p4 = {px[3],py[3],pz[3]};
 	    
 	    Particle particle1(p1,qs[0],TMath::Abs(dxy[0]) ,TMath::Abs(dz[0]), 0);
 	    Particle particle2(p2,qs[1], TMath::Abs(dxy[1]),TMath::Abs(dz[1]), 1);
 	    Particle particle3(p3,qs[2], TMath::Abs(dxy[2]),TMath::Abs(dz[2]), 2);
 	    Particle particle4(p4,qs[3], TMath::Abs(dxy[3]),TMath::Abs(dz[3]), 3);
-	    Particle particle5(p5,qs[4], TMath::Abs(dxy[4]),TMath::Abs(dz[4]), 4);
-	    Particle particle6(p6,qs[5],TMath::Abs(dxy[5]) ,TMath::Abs(dz[5]), 5);
 	    
-	    
-	    std::vector<Particle> allparticles= {particle1,particle2,particle3,particle4,particle5,particle6};
+	    std::vector<Particle> allparticles= {particle1,particle2,particle3,particle4};
 	    std::vector<Particle> dataplus;
 	    std::vector<Particle> dataminus;
 	    
-	    for (Int_t i = 0; i < track; i++)
+	    for (int i = 0; i < track; i++)
 	    {
 	        if(q[i] > 0)
 		{
@@ -591,18 +576,20 @@ Int_t main(Int_t argc, char* argv[])
 	    if (count < 20)
 	    {
 	    // Check if things work as intended 
-	        std::cout<< dxy[0] << " , " << dxy[1] << " , " << dxy[2] << " , " << dxy[3] << " , " << dxy[4] << " , " << dxy[5] << std::endl;
-	        std::cout<< qs[0] << " , " << qs[1] << " , " << qs[2] << " , " << qs[3] << " , " << qs[4] << "  ,  " << qs[5]<< std::endl;
+	        std::cout<< dxy[0] << " , " << dxy[1] << " , " << dxy[2] << " , " << dxy[3] << std::endl;
+	        std::cout<< qs[0] << " , " << qs[1] << " , " << qs[2] << " , " << qs[3] << std::endl;
 	        std::cout<< "Reduction;" << " " << pairs[0].dxy << " , " << pairs[1].dxy << " , " << pairs[2].dxy << " , " << pairs[3].dxy << std::endl;
-		std::cout<< pairs[0].idx << " , " << pairs[1].idx << " , " << pairs[2].idx << " , " << pairs[3].idx << std::endl;
+		 std::cout<< pairs[0].idx << " , " << pairs[1].idx << " , " << pairs[2].idx << " , " << pairs[3].idx << std::endl;
 	    }
 	    
 	    count += 1;
+	   
+	    //
 	  
 	    tvars.ThX[0] = ThxL+ThxR;
             tvars.ThY[0] = ThyL+ThyR;
 	    
-	    for (Int_t m = 0; m < 4; m++)
+	    for (int m = 0; m < 4; m++)
 	    {
 	        tvars.indx[m] = pairs[m].idx;
 		tvars.red_q[m] = pairs[m].charge;
@@ -616,7 +603,7 @@ Int_t main(Int_t argc, char* argv[])
 	    t1.Fill();
 	   
 	    // Finally pair up the 4-track into two 2-tracks
-	    std::vector<Float_t> mass = pair_up(pairs);
+	    std::vector<float> mass = pair_up(pairs);
 	    
 	    if (mass.size() == 0)
 	    {
@@ -653,10 +640,8 @@ Int_t main(Int_t argc, char* argv[])
 	    }
 	    
         }
-       
-	
-      
      }
+    
     
     TCanvas *c1 = new TCanvas("c1","c1",1800,800);
     c1->Divide(3,1);
@@ -763,10 +748,10 @@ Int_t main(Int_t argc, char* argv[])
     
   
   
-    //cout << "Number of bins: " << "  "  << numbins << std::endl;
-    //cout << "mu: " << "  "  << params[3] << "+-" << errs[3] << std::endl;
-    //cout << "sigma: " << "  "  << params[4] << "+-" << errs[4] << std::endl;
-    //cout << "Significans: " << "  "  << params[2]/errs[2]  << std::endl;
+    std::cout << "Number of bins: " << "  "  << numbins << std::endl;
+    std::cout << "mu: " << "  "  << params[3] << "+-" << errs[3] << std::endl;
+    std::cout << "sigma: " << "  "  << params[4] << "+-" << errs[4] << std::endl;
+    std::cout << "Significans: " << "  "  << params[2]/errs[2]  << std::endl;
     
     TCanvas *c8 = new TCanvas("c8","c8",800,600);
     h7->Draw("E1");
@@ -881,8 +866,6 @@ Int_t main(Int_t argc, char* argv[])
     
     
     //offdiagmass->Draw("E1");
-    
-    return 0;
     
     
 }
